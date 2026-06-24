@@ -1,6 +1,13 @@
 package com.opentonex.controller.protocol
 
 import com.opentonex.controller.domain.FirmwareInfo
+import com.opentonex.controller.domain.PedalState
+import com.opentonex.controller.domain.PresetSlot
+import com.opentonex.controller.domain.Rgb
+import com.opentonex.controller.domain.Slot
+
+/** Erro ao decodificar um StateResponse cujos bytes nao casam com o formato esperado. */
+class PedalStateParseException(message: String) : Exception(message)
 
 object TonexMessages {
     /** Header documentado do request de estado: 0x81 0x06 0x03. */
@@ -41,16 +48,16 @@ object TonexMessages {
      * (posicao do primeiro byte de tag do campo "input trim"). Sempre preserva
      * [payload] completo em [PedalState.rawState], mesmo que os offsets estejam errados.
      */
-    fun parseState(payload: ByteArray, fieldsOffset: Int): com.opentonex.controller.domain.PedalState {
+    fun parseState(payload: ByteArray, fieldsOffset: Int): PedalState {
         val walk = walkFields(payload, fieldsOffset)
         val slots = walk.colors.take(3).mapIndexed { index, color ->
-            com.opentonex.controller.domain.PresetSlot(
+            PresetSlot(
                 index = index,
                 name = "Preset ${('A' + index)}",
                 color = color
             )
         }
-        return com.opentonex.controller.domain.PedalState(
+        return PedalState(
             activeSlot = slotFromByte(walk.activeSlotByte),
             inputTrim = walk.inputTrim,
             a4Reference = walk.a4Reference,
@@ -68,7 +75,7 @@ object TonexMessages {
     fun buildSetStatePayload(
         rawState: ByteArray,
         fieldsOffset: Int,
-        newSlot: com.opentonex.controller.domain.Slot
+        newSlot: Slot
     ): ByteArray = buildSlotChangePayload(
         rawState = rawState,
         activeSlotOffset = activeSlotOffset(rawState, fieldsOffset),
@@ -77,7 +84,7 @@ object TonexMessages {
 
     private class FieldsWalk(
         val inputTrim: Float,
-        val colors: List<com.opentonex.controller.domain.Rgb>,
+        val colors: List<Rgb>,
         val activeSlotByte: Int,
         val activeSlotOffset: Int,
         val a4Reference: Int,
@@ -89,16 +96,18 @@ object TonexMessages {
         val trim = TaggedValue.decodeFloat(payload, offset); offset = trim.nextOffset
         offset += 2 // cabSimBypass + tuningMode (bytes crus, ainda nao usados na UI)
 
-        require((payload[offset].toInt() and 0xFF) == RGB_COLLECTION_TAG) {
-            "esperava colecao RGB (0x${RGB_COLLECTION_TAG.toString(16)}) no offset $offset"
+        if ((payload[offset].toInt() and 0xFF) != RGB_COLLECTION_TAG) {
+            throw PedalStateParseException(
+                "esperava colecao RGB (0x${RGB_COLLECTION_TAG.toString(16)}) no offset $offset"
+            )
         }
         offset++
         val colorCount = payload[offset].toInt() and 0xFF
         offset++
-        val colors = ArrayList<com.opentonex.controller.domain.Rgb>(colorCount)
+        val colors = ArrayList<Rgb>(colorCount)
         repeat(colorCount) {
             colors.add(
-                com.opentonex.controller.domain.Rgb(
+                Rgb(
                     r = payload[offset].toInt() and 0xFF,
                     g = payload[offset + 1].toInt() and 0xFF,
                     b = payload[offset + 2].toInt() and 0xFF
@@ -107,8 +116,10 @@ object TonexMessages {
             offset += 3
         }
 
-        require((payload[offset].toInt() and 0xFF) == SLOT_COLLECTION_TAG) {
-            "esperava colecao de slots (0x${SLOT_COLLECTION_TAG.toString(16)}) no offset $offset"
+        if ((payload[offset].toInt() and 0xFF) != SLOT_COLLECTION_TAG) {
+            throw PedalStateParseException(
+                "esperava colecao de slots (0x${SLOT_COLLECTION_TAG.toString(16)}) no offset $offset"
+            )
         }
         offset++
         val slotBytesCount = payload[offset].toInt() and 0xFF
@@ -134,15 +145,15 @@ object TonexMessages {
         )
     }
 
-    private fun slotFromByte(value: Int): com.opentonex.controller.domain.Slot = when (value) {
-        0 -> com.opentonex.controller.domain.Slot.A
-        1 -> com.opentonex.controller.domain.Slot.B
-        else -> com.opentonex.controller.domain.Slot.C
+    private fun slotFromByte(value: Int): Slot = when (value) {
+        0 -> Slot.A
+        1 -> Slot.B
+        else -> Slot.C
     }
 
-    fun slotToByte(slot: com.opentonex.controller.domain.Slot): Int = when (slot) {
-        com.opentonex.controller.domain.Slot.A -> 0
-        com.opentonex.controller.domain.Slot.B -> 1
-        com.opentonex.controller.domain.Slot.C -> 2
+    fun slotToByte(slot: Slot): Int = when (slot) {
+        Slot.A -> 0
+        Slot.B -> 1
+        Slot.C -> 2
     }
 }
