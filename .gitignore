@@ -1,6 +1,7 @@
-# Artefatos de tooling (ruflo / ruvector)
+# Artefatos de tooling (ruflo / ruvector / Claude Code harness)
 ruvector.db
 *.db
+.claude/
 
 # Android / Gradle (para quando o projeto for scaffolded)
 .gradle/
