@@ -1,0 +1,12 @@
+# Artefatos de tooling (ruflo / ruvector)
+ruvector.db
+*.db
+
+# Android / Gradle (para quando o projeto for scaffolded)
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+.cxx/
