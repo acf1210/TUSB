@@ -18,4 +18,15 @@ object TonexMessages {
             .trim()
         return FirmwareInfo(version = version.ifEmpty { "desconhecida" })
     }
+
+    /**
+     * Regrava o estado completo mudando somente o byte do slot ativo.
+     * Preserva todos os demais bytes (campos ainda nao decifrados).
+     */
+    fun buildSlotChangePayload(rawState: ByteArray, activeSlotOffset: Int, newSlotValue: Int): ByteArray {
+        require(activeSlotOffset in rawState.indices) { "offset de slot fora do estado" }
+        val copy = rawState.copyOf()
+        copy[activeSlotOffset] = newSlotValue.toByte()
+        return copy
+    }
 }

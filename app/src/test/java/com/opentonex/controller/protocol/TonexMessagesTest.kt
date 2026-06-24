@@ -19,4 +19,12 @@ class TonexMessagesTest {
             "1.2.3".toByteArray(Charsets.US_ASCII)
         assertEquals("1.2.3", TonexMessages.parseFirmware(resp).version)
     }
+
+    @Test fun `slot change preserves all bytes except active slot byte`() {
+        val raw = byteArrayOf(0x10, 0x20, 0x00 /*slot byte @2*/, 0x30, 0x40)
+        val out = TonexMessages.buildSlotChangePayload(
+            rawState = raw, activeSlotOffset = 2, newSlotValue = 2
+        )
+        assertArrayEquals(byteArrayOf(0x10, 0x20, 0x02, 0x30, 0x40), out)
+    }
 }
