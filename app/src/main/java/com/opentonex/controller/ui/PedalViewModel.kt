@@ -34,6 +34,30 @@ class PedalViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Conecta ao pedal real. A [factory] e suspensa porque abrir a porta USB exige o fluxo
+     * assincrono de permissao do Android (ver UsbSerialTransport.connect). Retornar null
+     * significa "pedal nao encontrado" e e reportado via [error].
+     */
+    fun connectReal(factory: suspend () -> PedalConnection?) {
+        viewModelScope.launch {
+            try {
+                _error.value = null
+                val connection = factory()
+                if (connection == null) {
+                    _error.value = "Pedal nao encontrado via USB"
+                    return@launch
+                }
+                val repo = PedalRepository(connection)
+                repository = repo
+                repo.connect()
+                _state.value = repo.state.value
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Falha ao conectar ao pedal"
+            }
+        }
+    }
+
     fun selectSlot(slot: Slot) {
         val repo = repository ?: return
         viewModelScope.launch {
