@@ -30,6 +30,7 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
     implementation(libs.coroutines.core)
+    implementation(libs.usb.serial.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
