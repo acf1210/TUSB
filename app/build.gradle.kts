@@ -31,6 +31,12 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.coroutines.core)
     implementation(libs.usb.serial.android)
+    implementation(libs.navigation.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.lifecycle.runtime.compose)
+    implementation(libs.compose.material3.window.size)
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.material.icons)
 
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
