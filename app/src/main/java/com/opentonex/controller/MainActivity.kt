@@ -16,6 +16,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.opentonex.controller.connection.UsbPedalConnection
+import com.opentonex.controller.protocol.HdlcCodec
+import com.opentonex.controller.protocol.HdlcFrame
+import com.opentonex.controller.protocol.TonexMessages
 import com.opentonex.controller.repository.ConnectionState
 import com.opentonex.controller.repository.PedalRepository
 import com.opentonex.controller.usb.UsbSerialTransport
@@ -39,6 +42,14 @@ class MainActivity : ComponentActivity() {
                 }) {
                     Text("Conectar pedal (debug)")
                 }
+                Button(onClick = {
+                    scope.launch {
+                        status = "Capturando Hello..."
+                        status = captureHelloRaw()
+                    }
+                }) {
+                    Text("Capturar Hello bruto (debug)")
+                }
             }
         }
     }
@@ -57,4 +68,31 @@ class MainActivity : ComponentActivity() {
     } catch (e: Exception) {
         "Erro: ${e.message}"
     }
+
+    /**
+     * Temporario p/ calibrar parseFirmware (Fase 2, Tarefa 8b): mostra o hex bruto do
+     * payload de Hello na tela, sem nenhum parse - o celular nao pode ser host USB do
+     * pedal e periferico ADB do PC ao mesmo tempo, entao isso e o jeito de capturar a
+     * evidencia sem logcat (mesma limitacao documentada no commit de calibracao do
+     * StateResponse).
+     */
+    private suspend fun captureHelloRaw(): String = try {
+        val manager = getSystemService(UsbManager::class.java)
+        val transport = UsbSerialTransport.connect(this, manager)
+            ?: return "Pedal nao encontrado via USB"
+        transport.open()
+        transport.write(HdlcCodec.encode(TonexMessages.helloPayload()))
+        val frame = transport.readFrame(2000L)
+        transport.close()
+        val payload = when (val decoded = HdlcCodec.decode(frame)) {
+            is HdlcFrame.Valid -> decoded.payload
+            HdlcFrame.CrcError -> return "CRC invalido | frame bruto: ${frame.toHexDebug()}"
+            HdlcFrame.Incomplete -> return "Frame incompleto | bytes brutos: ${frame.toHexDebug()}"
+        }
+        "Hello (${payload.size}B): ${payload.toHexDebug()}"
+    } catch (e: Exception) {
+        "Erro: ${e.message}"
+    }
+
+    private fun ByteArray.toHexDebug(): String = joinToString(" ") { "%02X".format(it) }
 }
