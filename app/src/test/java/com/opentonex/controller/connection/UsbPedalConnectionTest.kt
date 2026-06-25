@@ -14,31 +14,38 @@ import org.junit.Test
 private class FakePedalTransport : PedalTransport {
     val written = mutableListOf<ByteArray>()
     var nextFrame: ByteArray = ByteArray(0)
+    val pendingFrames = mutableListOf<ByteArray>()
     var opened = false
     var closed = false
 
     override suspend fun open() { opened = true }
     override suspend fun write(bytes: ByteArray) { written.add(bytes) }
-    override suspend fun readFrame(timeoutMs: Long): ByteArray = nextFrame
+    override suspend fun readFrame(timeoutMs: Long): ByteArray =
+        if (pendingFrames.isNotEmpty()) pendingFrames.removeAt(0) else nextFrame
     override suspend fun close() { closed = true }
 }
 
+private fun encodeColorItem(r: Int, g: Int, b: Int): ByteArray {
+    fun component(v: Int): ByteArray =
+        if (v >= 0x80) byteArrayOf(0x80.toByte(), v.toByte()) else byteArrayOf(v.toByte())
+    return byteArrayOf(0xB9.toByte(), 3) + component(r) + component(g) + component(b)
+}
+
 private fun syntheticStatePayload(activeSlotByte: Byte): ByteArray {
-    val header = ByteArray(UsbPedalConnection.STATE_FIELDS_OFFSET)
+    val headerWithType = byteArrayOf(0xB9.toByte(), 0x03, 0x81.toByte(), 0x06, 0x03)
+    val header = headerWithType + ByteArray(UsbPedalConnection.STATE_FIELDS_OFFSET - headerWithType.size)
     val trim = TaggedValue.encodeFloat(1.5f)
-    val flags = byteArrayOf(0x01, 0x00)
-    val colors = byteArrayOf(
-        0xBA.toByte(), 3,
-        255.toByte(), 0, 0,
-        0, 255.toByte(), 0,
-        0, 0, 255.toByte()
-    )
+    val flags = byteArrayOf(0x01, 0x00, 0x00)
+    val colors = byteArrayOf(0xBA.toByte(), 3) +
+        encodeColorItem(255, 0, 0) + encodeColorItem(0, 255, 0) + encodeColorItem(0, 0, 255)
     val slotAssignment = byteArrayOf(0xBC.toByte(), 6, 0, 0, 0, 0, 0, 0)
+    val unknownByte = byteArrayOf(0)
     val a4 = TaggedValue.encodeU16(440, tag = 0x81)
     val directMonitor = byteArrayOf(0)
+    val tempoSource = byteArrayOf(0)
     val tempo = TaggedValue.encodeFloat(120.0f)
     return header + trim + flags + colors + slotAssignment +
-        byteArrayOf(activeSlotByte) + a4 + directMonitor + tempo
+        byteArrayOf(activeSlotByte) + unknownByte + a4 + directMonitor + tempoSource + tempo
 }
 
 class UsbPedalConnectionTest {
@@ -87,6 +94,18 @@ class UsbPedalConnectionTest {
         val decoded = HdlcCodec.decode(sentFrame) as HdlcFrame.Valid
         val resultState = TonexMessages.parseState(decoded.payload, fieldsOffset = UsbPedalConnection.STATE_FIELDS_OFFSET)
         assertEquals(Slot.C, resultState.activeSlot)
+    }
+
+    @Test fun `requestState ignores async notifications and waits for the StateResponse type`() = runTest {
+        val transport = FakePedalTransport()
+        val noisePayload = byteArrayOf(0xB9.toByte(), 0x03, 0x81.toByte(), 0x09, 0x03, 0x0A, 0x02)
+        transport.pendingFrames.add(HdlcCodec.encode(noisePayload))
+        transport.nextFrame = HdlcCodec.encode(syntheticStatePayload(activeSlotByte = 1))
+        val connection = UsbPedalConnection(transport)
+
+        val state = connection.requestState()
+
+        assertEquals(Slot.B, state.activeSlot)
     }
 
     @Test fun `disconnect closes the transport`() = runTest {

@@ -31,30 +31,35 @@ class TonexMessagesTest {
     }
 }
 
+private fun encodeColorItem(r: Int, g: Int, b: Int): ByteArray {
+    fun component(v: Int): ByteArray =
+        if (v >= 0x80) byteArrayOf(0x80.toByte(), v.toByte()) else byteArrayOf(v.toByte())
+    return byteArrayOf(0xB9.toByte(), 3) + component(r) + component(g) + component(b)
+}
+
+/** Estrutura calibrada contra captura real do pedal (Fase 2, Tarefa 8). */
 private fun syntheticStatePayload(activeSlotByte: Byte = 1): ByteArray {
-    val header = ByteArray(13) // header bruto do StateResponse, ignorado pelo parser
+    val header = ByteArray(22) // header bruto do StateResponse, ignorado pelo parser
     val trim = TaggedValue.encodeFloat(1.5f)
-    val flags = byteArrayOf(0x01, 0x00) // cabSimBypass=on, tuningMode=mute
-    val colors = byteArrayOf(
-        0xBA.toByte(), 3,
-        255.toByte(), 0, 0,
-        0, 255.toByte(), 0,
-        0, 0, 255.toByte()
-    )
+    val flags = byteArrayOf(0x01, 0x00, 0x00) // cabSimBypass, tuningMode, campo desconhecido
+    val colors = byteArrayOf(0xBA.toByte(), 3) +
+        encodeColorItem(255, 0, 0) + encodeColorItem(0, 255, 0) + encodeColorItem(0, 0, 255)
     val slotAssignment = byteArrayOf(0xBC.toByte(), 6, 0, 0, 0, 0, 0, 0)
+    val unknownByte = byteArrayOf(0)
     val a4 = TaggedValue.encodeU16(440, tag = 0x81)
     val directMonitor = byteArrayOf(0)
+    val tempoSource = byteArrayOf(0)
     val tempo = TaggedValue.encodeFloat(120.0f)
 
     return header + trim + flags + colors + slotAssignment +
-        byteArrayOf(activeSlotByte) + a4 + directMonitor + tempo
+        byteArrayOf(activeSlotByte) + unknownByte + a4 + directMonitor + tempoSource + tempo
 }
 
 class TonexMessagesStateTest {
     @Test fun `parseState decodes documented fields from synthetic payload`() {
         val payload = syntheticStatePayload(activeSlotByte = 1)
 
-        val state = TonexMessages.parseState(payload, fieldsOffset = 13)
+        val state = TonexMessages.parseState(payload, fieldsOffset = 22)
 
         assertEquals(1.5f, state.inputTrim)
         assertEquals(Slot.B, state.activeSlot)
@@ -70,10 +75,10 @@ class TonexMessagesStateTest {
     @Test fun `buildSetStatePayload mutates only the active slot byte`() {
         val payload = syntheticStatePayload(activeSlotByte = 1)
 
-        val updated = TonexMessages.buildSetStatePayload(payload, fieldsOffset = 13, newSlot = Slot.C)
+        val updated = TonexMessages.buildSetStatePayload(payload, fieldsOffset = 22, newSlot = Slot.C)
 
         val expected = payload.copyOf()
-        val activeSlotOffset = TonexMessages.activeSlotOffset(payload, fieldsOffset = 13)
+        val activeSlotOffset = TonexMessages.activeSlotOffset(payload, fieldsOffset = 22)
         expected[activeSlotOffset] = 2
         assertArrayEquals(expected, updated)
     }

@@ -44,12 +44,17 @@ class UsbSerialTransport(private val port: UsbSerialPort) : PedalTransport {
             for (i in 0 until read) {
                 val b = buffer[i]
                 val isFlag = (b.toInt() and 0xFF) == FLAG
-                if (isFlag && !sawStartFlag) {
+                if (isFlag) {
+                    if (sawStartFlag && frame.size > 1) {
+                        // flag de fechamento de um frame com payload real
+                        frame.add(b)
+                        return frame.toByteArray()
+                    }
+                    // flag de abertura, ou flag de preenchimento ocioso (0x7E repetido
+                    // entre frames, sem dados no meio) - reinicia a captura aqui
+                    frame.clear()
+                    frame.add(b)
                     sawStartFlag = true
-                    frame.add(b)
-                } else if (isFlag && sawStartFlag) {
-                    frame.add(b)
-                    return frame.toByteArray()
                 } else if (sawStartFlag) {
                     frame.add(b)
                 }
@@ -78,6 +83,9 @@ class UsbSerialTransport(private val port: UsbSerialPort) : PedalTransport {
             val port = driver.ports.firstOrNull() ?: return null
             port.open(connection)
             port.setParameters(BAUD_RATE, UsbSerialPort.DATABITS_8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
+            // Muitos dispositivos CDC ACM ficam mudos até o host afirmar DTR/RTS.
+            port.dtr = true
+            port.rts = true
             return UsbSerialTransport(port)
         }
 
@@ -96,6 +104,7 @@ class UsbSerialTransport(private val port: UsbSerialPort) : PedalTransport {
                     IntentFilter(ACTION_USB_PERMISSION),
                     ContextCompat.RECEIVER_NOT_EXPORTED
                 )
+                cont.invokeOnCancellation { runCatching { context.unregisterReceiver(receiver) } }
                 val pendingIntent = PendingIntent.getBroadcast(
                     context, 0, Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_MUTABLE
                 )
