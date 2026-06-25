@@ -14,6 +14,6 @@ captures/
 
 # Capturas de diagnostico do pedal (artefatos, nao versionar)
 tonex_diag.txt
-tonex_usb_capture.pcap
+*.pcap
 usbpcap_*.txt
 usbpcap_*.log
