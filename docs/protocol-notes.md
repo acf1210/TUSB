@@ -54,9 +54,25 @@ Hardware: ToneX One, VID 0x1963 / PID 0x00D1, CDC ACM @ 115200, framing HDLC (0x
   preset** — via USBPcap (que falhou nesta sessão; precisa de `-I` para hub USB 3.0
   e/ou execução elevada) ou outro sniffer USB.
 
-## Próximos passos sugeridos
-1. Re-rodar o diagnóstico capturando ESPECIFICAMENTE qual byte do 0x0306 muda quando o
-   preset troca (achar o offset real do slot ativo).
-2. Capturar o app oficial no PC trocando preset para obter o comando de escrita real.
-3. Decodificar o campo de versão de firmware (spec IK ou comparar com versão mostrada
-   pelo app oficial).
+## Status da captura USB (2026-06-25) — BLOQUEADO
+
+Tentativas de USBPcap nesta maquina falharam (5+ vezes). Diagnostico final:
+- O pedal enumera num **root hub USB 3.0 (xHCI / ROOT_HUB30)**, em `\\.\USBPcap2`.
+- **Elevado:** USBPcapCMD abre o device mas captura **0 pacotes** (so o header de 24 B) —
+  limitacao conhecida do USBPcap em xHCI (exige setup de `NonStandardHWIDs` + reconectar).
+- **Nao elevado:** `Couldn't open device - 5` (acesso negado).
+- Conclusao: nao adianta repetir o USBPcap CLI neste setup.
+
+## Proximos passos sugeridos (Bug 2)
+
+1. **[Maior chance] Plugar o pedal via porta/HUB USB 2.0** (forcar enumeracao Full Speed,
+   fora do xHCI). Aí o USBPcap captura sem o setup de USB 3.0. Comando, em terminal
+   **como administrador**, e identificar o novo `\\.\USBPcapN` do hub 2.0:
+   `& "C:\Program Files\USBPcap\USBPcapCMD.exe" -d "\\.\USBPcapN" -A -o saida.pcap`
+   Trocar preset no app oficial, Ctrl+C, ler com `tshark` e achar o comando host->device.
+2. **MIDI Program Change**: confirmar se o ToneX One expoe interface USB-MIDI (na
+   enumeracao aparecia so serial CDC + audio; checar device composto / manual IK). Se
+   sim, trocar de preset via Program Change padrao dispensa engenharia reversa.
+3. Achar o offset REAL do slot ativo no 0x0306 (no footswitch o byte em BC+8 ficou 00 —
+   o offset assumido via `STATE_FIELDS_OFFSET=22` provavelmente esta errado).
+4. Decodificar o campo de versao de firmware (spec IK ou comparar com o app oficial).
