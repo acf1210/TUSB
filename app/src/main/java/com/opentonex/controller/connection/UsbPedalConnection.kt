@@ -21,7 +21,11 @@ class UsbPedalConnection(
     }
 
     override suspend fun sendHello(): FirmwareInfo =
-        TonexMessages.parseFirmware(roundTrip(TonexMessages.helloPayload()))
+        // O Hello responde com um frame de estado (tipo 0x0306); filtramos por tipo para
+        // nao parsear notificacoes assincronas por engano. Ver docs/protocol-notes.md.
+        TonexMessages.parseFirmware(
+            roundTripExpecting(TonexMessages.helloPayload(), TonexMessages.STATE_RESPONSE_TYPE)
+        )
 
     override suspend fun requestState(): PedalState {
         val payload = roundTripExpecting(TonexMessages.requestStatePayload(), TonexMessages.STATE_RESPONSE_TYPE)
@@ -43,15 +47,10 @@ class UsbPedalConnection(
         transport.close()
     }
 
-    private suspend fun roundTrip(payload: ByteArray): ByteArray {
-        transport.write(HdlcCodec.encode(payload))
-        return decodeFrame(transport.readFrame(RESPONSE_TIMEOUT_MS))
-    }
-
     /**
-     * Igual a [roundTrip], mas descarta notificacoes assincronas do pedal (ex: medidor
-     * de nivel, tipo diferente do esperado) ate achar a resposta correta ou esgotar o
-     * timeout total.
+     * Escreve [payload] e descarta notificacoes assincronas do pedal (ex: medidor de
+     * nivel, tipo diferente do esperado) ate achar a resposta do tipo esperado ou
+     * esgotar o timeout total.
      */
     private suspend fun roundTripExpecting(payload: ByteArray, expectedType: Int): ByteArray {
         transport.write(HdlcCodec.encode(payload))

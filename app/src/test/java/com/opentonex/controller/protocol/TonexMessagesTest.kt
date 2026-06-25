@@ -22,6 +22,18 @@ class TonexMessagesTest {
         assertEquals("1.2.3", TonexMessages.parseFirmware(resp).version)
     }
 
+    // Captura real do Hello (tipo 0x0306, dump de estado binario): bytes imprimiveis
+    // dispersos ("LBLG" etc.) NAO devem virar string de versao. Ver docs/protocol-notes.md.
+    @Test fun `parse firmware does not scrape garbage from binary state frame`() {
+        val resp = byteArrayOf(
+            0xB9.toByte(), 0x03, 0x81.toByte(), 0x06, 0x03, 0x80.toByte(), 0xA0.toByte(),
+            0x02, 0xB9.toByte(), 0x01, 0xB9.toByte(), 0x0E, 0x82.toByte(),
+            0x4C, 0x42, 0x4C, 0x47, // "LBLG" (sem digito)
+            0xB9.toByte(), 0x03, 0x00, 0x04, 0x00, 0x88.toByte()
+        )
+        assertEquals("indisponível", TonexMessages.parseFirmware(resp).version)
+    }
+
     @Test fun `slot change preserves all bytes except active slot byte`() {
         val raw = byteArrayOf(0x10, 0x20, 0x00 /*slot byte @2*/, 0x30, 0x40)
         val out = TonexMessages.buildSlotChangePayload(

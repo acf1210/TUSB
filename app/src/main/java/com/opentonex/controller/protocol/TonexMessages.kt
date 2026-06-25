@@ -31,14 +31,29 @@ object TonexMessages {
     /** Mensagem inicial de handshake. Bytes refinados contra captura real na Fase 2. */
     fun helloPayload(): ByteArray = byteArrayOf(0xB9.toByte(), 0x03, 0x81.toByte(), 0x03, 0x00)
 
-    /** Extrai a versao ASCII imprimivel da resposta de Hello. */
+    /**
+     * Extrai a versao da resposta de Hello. O pedal devolve um dump de estado binario
+     * (tipo 0x0306, nao uma string limpa - ver docs/protocol-notes.md). Pegamos a maior
+     * sequencia CONTIGUA de ASCII imprimivel com >= 3 chars e ao menos um digito (versoes
+     * tem digitos), evitando concatenar bytes binarios dispersos como lixo ("LBLG@//...").
+     */
     fun parseFirmware(response: ByteArray): FirmwareInfo {
-        val version = response
-            .filter { it.toInt() in 0x20..0x7E }
-            .toByteArray()
-            .toString(Charsets.US_ASCII)
-            .trim()
-        return FirmwareInfo(version = version.ifEmpty { "desconhecida" })
+        val runs = mutableListOf<String>()
+        val current = StringBuilder()
+        for (b in response) {
+            val c = b.toInt() and 0xFF
+            if (c in 0x20..0x7E) {
+                current.append(c.toChar())
+            } else if (current.isNotEmpty()) {
+                runs.add(current.toString()); current.clear()
+            }
+        }
+        if (current.isNotEmpty()) runs.add(current.toString())
+        val version = runs
+            .map { it.trim() }
+            .filter { it.length >= 3 && it.any(Char::isDigit) }
+            .maxByOrNull { it.length }
+        return FirmwareInfo(version = version ?: "indisponível")
     }
 
     /**
