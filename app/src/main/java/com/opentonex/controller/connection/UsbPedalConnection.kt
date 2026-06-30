@@ -1,6 +1,7 @@
 package com.opentonex.controller.connection
 
 import com.opentonex.controller.domain.FirmwareInfo
+import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.protocol.HdlcCodec
 import com.opentonex.controller.protocol.HdlcFrame
@@ -63,6 +64,7 @@ class UsbPedalConnection(
                     )
                 )
                 val state = decodeStateFromResponse(response)
+                android.util.Log.d("ToneXConn", "handshake rawState(${response.size}B)=${response.joinToString(" ") { "%02X".format(it) }}")
                 return Handshake(firmware = firmware, state = state)
             } catch (e: PedalTransportTimeoutException) {
                 lastError = e
@@ -147,6 +149,13 @@ class UsbPedalConnection(
             }
             delay(PRESET_COMMAND_STEP_DELAY_MS)
         }
+    }
+
+    override suspend fun switchMode(currentState: PedalState, targetMode: PedalMode) {
+        val payload = TonexMessages.buildSwitchModePayload(currentState.rawState, targetMode)
+        val frame = HdlcCodec.encode(payload)
+        android.util.Log.d("ToneXConn", "switchMode target=$targetMode frame(${frame.size}B)=${frame.toHex()}")
+        transport.write(frame)
     }
 
     override suspend fun disconnect() {

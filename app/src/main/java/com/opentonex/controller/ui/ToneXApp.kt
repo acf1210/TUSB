@@ -36,6 +36,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import java.io.File
 import com.opentonex.controller.connection.PedalConnection
+import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.Slot
 import com.opentonex.controller.repository.ConnectionState
@@ -84,6 +85,7 @@ fun ToneXApp(
                 isTablet = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact,
                 busyState = busyState,
                 onSelectSlot = viewModel::selectSlot,
+                onSwitchMode = viewModel::switchMode,
                 captureState = captureState,
                 onRefreshState = viewModel::refreshState,
                 onStartCapture = { viewModel.startCapture(onResolveCaptureDirectory()) },
@@ -115,6 +117,7 @@ private fun ConnectedApp(
     isTablet: Boolean,
     busyState: UiBusyState,
     onSelectSlot: (Slot) -> Unit,
+    onSwitchMode: (PedalMode) -> Unit,
     captureState: CaptureUiState,
     onRefreshState: () -> Unit,
     onStartCapture: () -> Unit,
@@ -138,7 +141,7 @@ private fun ConnectedApp(
                 }
             }
             ConnectedNavHost(
-                navController, firmwareVersion, pedal, busyState, onSelectSlot,
+                navController, firmwareVersion, pedal, busyState, onSelectSlot, onSwitchMode,
                 captureState, onRefreshState, onStartCapture, onStopCapture, onDisconnect,
                 modifier = Modifier.fillMaxSize()
             )
@@ -160,7 +163,7 @@ private fun ConnectedApp(
             }
         ) { padding ->
             ConnectedNavHost(
-                navController, firmwareVersion, pedal, busyState, onSelectSlot,
+                navController, firmwareVersion, pedal, busyState, onSelectSlot, onSwitchMode,
                 captureState, onRefreshState, onStartCapture, onStopCapture, onDisconnect,
                 modifier = Modifier.fillMaxSize().padding(padding)
             )
@@ -175,6 +178,7 @@ private fun ConnectedNavHost(
     pedal: PedalState,
     busyState: UiBusyState,
     onSelectSlot: (Slot) -> Unit,
+    onSwitchMode: (PedalMode) -> Unit,
     captureState: CaptureUiState,
     onRefreshState: () -> Unit,
     onStartCapture: () -> Unit,
@@ -191,10 +195,12 @@ private fun ConnectedNavHost(
             HomeScreen(
                 firmwareVersion = firmwareVersion,
                 activeSlot = pedal.activeSlot,
+                pedalMode = pedal.pedalMode,
                 presets = pedal.slots,
                 isBusy = busyState.isBusy,
                 busyReason = busyState.busyReason,
-                onSelectSlot = onSelectSlot
+                onSelectSlot = onSelectSlot,
+                onSwitchMode = onSwitchMode
             )
         }
         composable(TopLevelDestination.EDITOR.route) {

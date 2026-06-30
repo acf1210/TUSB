@@ -1,6 +1,7 @@
 package com.opentonex.controller.connection
 
 import com.opentonex.controller.domain.FirmwareInfo
+import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.PresetSlot
 import com.opentonex.controller.domain.Rgb
@@ -56,6 +57,10 @@ class FakePedalConnection : PedalConnection {
         return state
     }
     override suspend fun writeState(state: PedalState) { this.state = state }
+    override suspend fun switchMode(currentState: PedalState, targetMode: PedalMode) {
+        state = state.copy(pedalMode = targetMode)
+    }
+
     override suspend fun selectPreset(presetId: Int) {
         val slot = state.presetIds.indexOf(presetId).takeIf { it >= 0 } ?: return
         state = state.copy(activeSlot = Slot.entries[slot])

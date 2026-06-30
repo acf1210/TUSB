@@ -1,6 +1,7 @@
 package com.opentonex.controller.connection
 
 import com.opentonex.controller.domain.FirmwareInfo
+import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import kotlinx.coroutines.flow.Flow
 
@@ -20,5 +21,7 @@ interface PedalConnection {
     suspend fun writeState(state: PedalState)
     /** Troca o preset ativo pelo seu [presetId] na biblioteca do pedal (comando real, tipo 0x0300). */
     suspend fun selectPreset(presetId: Int)
+    /** Alterna o modo operacional do pedal (AB <-> STOMP). */
+    suspend fun switchMode(currentState: PedalState, targetMode: PedalMode)
     suspend fun disconnect()
 }

@@ -2,6 +2,8 @@ package com.opentonex.controller.domain
 
 enum class Slot { A, B, C }
 
+enum class PedalMode { AB, STOMP }
+
 data class Rgb(val r: Int, val g: Int, val b: Int)
 
 enum class ParamType { FLOAT, INT, BYTE }
@@ -31,7 +33,9 @@ data class PedalState(
     /** ID do preset (na biblioteca do pedal) atribuido a cada slot, na ordem A, B, C. */
     val presetIds: List<Int> = emptyList(),
     /** Bytes do estado completo recebidos do pedal, preservados para regravacao fiel. */
-    val rawState: ByteArray = ByteArray(0)
+    val rawState: ByteArray = ByteArray(0),
+    /** Modo operacional do pedal: AB (2 slots) ou STOMP (3 slots). */
+    val pedalMode: PedalMode = PedalMode.AB
 ) {
     fun withActiveSlot(slot: Slot): PedalState = copy(activeSlot = slot)
 

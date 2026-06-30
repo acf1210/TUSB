@@ -4,6 +4,7 @@ import com.opentonex.controller.capture.EventCaptureRecorder
 import com.opentonex.controller.connection.PedalConnection
 import com.opentonex.controller.connection.PedalRuntimeEvent
 import com.opentonex.controller.domain.FirmwareInfo
+import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.Slot
 import com.opentonex.controller.protocol.TonexMessages
@@ -62,6 +63,14 @@ class PedalRepository(
         android.util.Log.d("ToneXRepo", "selectSlot=$slot presetId=$presetId stableIds=$stablePresetIds rawIds=${current.pedal.presetIds}")
         connection.writeState(current.pedal.withActiveSlot(slot))
         recordLocalAction("select_preset_attempt", mapOf("slot" to slot.name, "presetId" to (presetId ?: "null")))
+    }
+
+    suspend fun switchMode(targetMode: PedalMode) {
+        val current = _state.value as? ConnectionState.Connected ?: return
+        recordLocalAction("switch_mode", mapOf("target" to targetMode.name))
+        connection.switchMode(current.pedal, targetMode)
+        val newState = connection.requestState()
+        _state.value = current.copy(pedal = reconcilePedal(newState).copy(pedalMode = TonexMessages.detectMode(newState)))
     }
 
     suspend fun refreshState() {

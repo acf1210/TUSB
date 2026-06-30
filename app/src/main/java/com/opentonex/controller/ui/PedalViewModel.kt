@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.opentonex.controller.capture.EventCaptureRecorder
 import com.opentonex.controller.connection.PedalConnection
+import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.Slot
 import com.opentonex.controller.repository.ConnectionState
 import com.opentonex.controller.repository.PedalRepository
@@ -98,6 +99,23 @@ class PedalViewModel : ViewModel() {
                 _state.value = repo.state.value
             } catch (e: Exception) {
                 _error.value = e.message ?: "Falha ao trocar de slot"
+            } finally {
+                clearBusy()
+            }
+        }
+    }
+
+    fun switchMode(targetMode: PedalMode) {
+        if (_busy.value.isBusy) return
+        val repo = repository ?: return
+        viewModelScope.launch {
+            try {
+                setBusy("Alterando modo para ${targetMode.name}...")
+                _error.value = null
+                repo.switchMode(targetMode)
+                _state.value = repo.state.value
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Falha ao alterar modo"
             } finally {
                 clearBusy()
             }

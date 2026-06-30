@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PresetSlot
 import com.opentonex.controller.domain.Rgb
 import com.opentonex.controller.domain.Slot
@@ -31,10 +34,12 @@ import com.opentonex.controller.domain.Slot
 fun HomeScreen(
     firmwareVersion: String,
     activeSlot: Slot,
+    pedalMode: PedalMode,
     presets: List<PresetSlot>,
     isBusy: Boolean,
     busyReason: String?,
     onSelectSlot: (Slot) -> Unit,
+    onSwitchMode: (PedalMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
@@ -44,16 +49,27 @@ fun HomeScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Slot.entries.forEach { slot ->
-                FilterChip(
-                    selected = slot == activeSlot,
-                    enabled = !isBusy,
-                    onClick = { onSelectSlot(slot) },
-                    label = { Text(slot.name) }
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val visibleSlots = if (pedalMode == PedalMode.STOMP) Slot.entries else listOf(Slot.A, Slot.B)
+                visibleSlots.forEach { slot ->
+                    FilterChip(
+                        selected = slot == activeSlot,
+                        enabled = !isBusy,
+                        onClick = { onSelectSlot(slot) },
+                        label = { Text(slot.name) }
+                    )
+                }
+            }
+            val targetMode = if (pedalMode == PedalMode.STOMP) PedalMode.AB else PedalMode.STOMP
+            OutlinedButton(
+                onClick = { onSwitchMode(targetMode) },
+                enabled = !isBusy
+            ) {
+                Text(if (pedalMode == PedalMode.STOMP) "Modo A/B" else "Modo Stomp")
             }
         }
         if (busyReason != null) {

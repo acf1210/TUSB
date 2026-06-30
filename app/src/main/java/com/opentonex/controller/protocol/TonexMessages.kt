@@ -1,6 +1,7 @@
 package com.opentonex.controller.protocol
 
 import com.opentonex.controller.domain.FirmwareInfo
+import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.PresetSlot
 import com.opentonex.controller.domain.Rgb
@@ -160,12 +161,21 @@ object TonexMessages {
      * de RESPOSTA pelo header de COMANDO real do app oficial (mesmo corpo, envelope
      * diferente). [activeSlotOffset] e relativo a [rawState] (inclui o header de resposta).
      */
+    // Offsets contados do FIM do StateData (= body sem o header de 8B), confirmados via
+    // firmware ESP32 de referencia: usb_tonex_one.c (set_preset_in_slot / set_active_slot).
+    private const val DIRECT_MONITOR_END_OFFSET = 7   // StateData[len-7]: 0=mute, 1=on
+    private const val BYPASS_MODE_END_OFFSET    = 12  // StateData[len-12]: 0=active, 1=bypass
+
     fun buildSlotChangePayload(rawState: ByteArray, activeSlotOffset: Int, newSlotValue: Int): ByteArray {
         require(activeSlotOffset in rawState.indices) { "offset de slot fora do estado" }
         require(rawState.size > STATE_RESPONSE_HEADER_LENGTH) { "rawState curto demais para conter o header de resposta" }
         val typeHeader = rawState.copyOfRange(0, 5)
         val body = rawState.copyOfRange(STATE_RESPONSE_HEADER_LENGTH, rawState.size)
         body[activeSlotOffset - STATE_RESPONSE_HEADER_LENGTH] = newSlotValue.toByte()
+        // direct monitor ON: sem isso o pedal muta o audio quando conectado via USB
+        if (body.size > DIRECT_MONITOR_END_OFFSET) body[body.size - DIRECT_MONITOR_END_OFFSET] = 1
+        // bypass OFF: se bypass=1 for enviado os 3 botoes piscam indefinidamente
+        if (body.size > BYPASS_MODE_END_OFFSET) body[body.size - BYPASS_MODE_END_OFFSET] = 0
         return typeHeader + SET_STATE_COMMAND_SUFFIX + body
     }
 
@@ -343,5 +353,21 @@ object TonexMessages {
         Slot.A -> 0
         Slot.B -> 1
         Slot.C -> 2
+    }
+
+    /** Detecta o modo do pedal com base no numero de slots retornados no estado. */
+    fun detectMode(state: PedalState): PedalMode =
+        if (state.slots.size >= 3) PedalMode.STOMP else PedalMode.AB
+
+    /**
+     * Offset absoluto do byte de modo no rawState.
+     * Calibrado comparando rawState em A/B (=0x00) vs Stomp (=0x01) — captura 2026-06-30.
+     */
+    const val MODE_BYTE_OFFSET = 27
+
+    /** Constroi o payload de troca de modo (AB <-> STOMP). */
+    fun buildSwitchModePayload(rawState: ByteArray, targetMode: PedalMode): ByteArray {
+        val modeValue = if (targetMode == PedalMode.STOMP) 1 else 0
+        return buildSlotChangePayload(rawState, MODE_BYTE_OFFSET, modeValue)
     }
 }
