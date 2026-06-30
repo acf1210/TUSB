@@ -21,3 +21,9 @@ tonex-session-*.jsonl
 
 # Artefato do compilador Kotlin
 .kotlin/
+tools/apk-reverse/*.apk
+tools/apk-reverse/*.so
+tools/apk-reverse/*.png
+tools/jadx/
+tools/apk-reverse/src/
+tools/apk-reverse/apktool-out/
