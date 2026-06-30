@@ -121,20 +121,32 @@ class UsbPedalConnection(
     }
 
     override suspend fun writeState(state: PedalState) {
-        // Comando real de troca de slot (descoberto via captura USB do app oficial,
-        // 2026-06-25, tonex_isolated_switch.pcap): reenviar o StateResponse completo
-        // com o byte do slot ativo trocado e o envelope de COMANDO (nao de resposta).
-        // Ver TonexMessages.buildSetStatePayload / docs/protocol-notes.md.
         val payload = TonexMessages.buildSetStatePayload(state.rawState, fieldsOffset, state.activeSlot)
+        val frame = HdlcCodec.encode(payload)
+        android.util.Log.d("ToneXConn", "writeState slot=${state.activeSlot} frame(${frame.size}B)=${frame.take(12).joinToString(" ") { "%02X".format(it) }}...")
         emitRequestEvent(requestKind = "write_state", payload = payload)
-        transport.write(HdlcCodec.encode(payload))
+        try {
+            transport.write(frame)
+            android.util.Log.d("ToneXConn", "writeState write OK")
+        } catch (e: Exception) {
+            android.util.Log.e("ToneXConn", "writeState FAILED: ${e.message}", e)
+        }
     }
 
     override suspend fun selectPreset(presetId: Int) {
-        val payload = byteArrayOf(0xF0.toByte(), presetId.toByte(), 0xF7.toByte(), 0x05, 0x00, 0x01)
-        android.util.Log.d("ToneXConn", "selectPreset presetId=0x${presetId.toString(16)} payload=${payload.joinToString(" ") { "%02X".format(it) }}")
-        emitRequestEvent(requestKind = "select_preset", payload = payload)
-        transport.write(payload)
+        android.util.Log.d("ToneXConn", "selectPreset presetId=0x${presetId.toString(16)}")
+        for (payload in TonexMessages.selectPresetPayloads(presetId)) {
+            val frame = HdlcCodec.encode(payload)
+            android.util.Log.d("ToneXConn", "  -> frame(${frame.size}B)=${frame.joinToString(" ") { "%02X".format(it) }}")
+            emitRequestEvent(requestKind = "select_preset", payload = payload)
+            try {
+                transport.write(frame)
+                android.util.Log.d("ToneXConn", "  -> write OK")
+            } catch (e: Exception) {
+                android.util.Log.e("ToneXConn", "  -> write FAILED: ${e.message}", e)
+            }
+            delay(PRESET_COMMAND_STEP_DELAY_MS)
+        }
     }
 
     override suspend fun disconnect() {

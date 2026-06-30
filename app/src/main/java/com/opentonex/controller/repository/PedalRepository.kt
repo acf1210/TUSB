@@ -60,9 +60,7 @@ class PedalRepository(
         val enrichedPedal = current.pedal.withTrustedPresetIds()
         val presetId = TonexMessages.presetIdForSlot(enrichedPedal, slot)
         android.util.Log.d("ToneXRepo", "selectSlot=$slot presetId=$presetId stableIds=$stablePresetIds rawIds=${current.pedal.presetIds}")
-        if (presetId != null) {
-            connection.selectPreset(presetId)
-        }
+        connection.writeState(current.pedal.withActiveSlot(slot))
         recordLocalAction("select_preset_attempt", mapOf("slot" to slot.name, "presetId" to (presetId ?: "null")))
     }
 
