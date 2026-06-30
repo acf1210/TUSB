@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ConnectScreen(
     statusMessage: String,
+    isBusy: Boolean,
     errorMessage: String?,
     onConnectReal: () -> Unit,
     onConnectFake: () -> Unit,
@@ -37,11 +38,12 @@ fun ConnectScreen(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
         )
-        Button(onClick = onConnectReal) {
+        Button(onClick = onConnectReal, enabled = !isBusy) {
             Text("Conectar pedal via USB-C")
         }
         OutlinedButton(
             onClick = onConnectFake,
+            enabled = !isBusy,
             modifier = Modifier.padding(top = 12.dp)
         ) {
             Text("Usar pedal simulado")

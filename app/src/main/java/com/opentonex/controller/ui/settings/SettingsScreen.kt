@@ -14,6 +14,14 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SettingsScreen(
     firmwareVersion: String,
+    isBusy: Boolean,
+    busyReason: String?,
+    isCapturing: Boolean,
+    captureFilePath: String?,
+    lastCaptureFilePath: String?,
+    onRefreshState: () -> Unit,
+    onStartCapture: () -> Unit,
+    onStopCapture: () -> Unit,
     onDisconnect: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -23,13 +31,37 @@ fun SettingsScreen(
     ) {
         Text(text = "Configuracoes", style = MaterialTheme.typography.titleLarge)
         Text(text = "Firmware do pedal: $firmwareVersion")
+        if (busyReason != null) {
+            Text(
+                text = busyReason,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Text(
             text = "ToneX Controller - controle nao-oficial via USB-C para o " +
                 "IK Multimedia ToneX One (versao sem Bluetooth).",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Button(onClick = onDisconnect) {
+        Button(onClick = onRefreshState, enabled = !isBusy) {
+            Text("Atualizar estado do pedal")
+        }
+        if (isCapturing) {
+            Button(onClick = onStopCapture, enabled = !isBusy) {
+                Text("Parar captura JSONL")
+            }
+        } else {
+            Button(onClick = onStartCapture, enabled = !isBusy) {
+                Text("Iniciar captura JSONL")
+            }
+        }
+        if (captureFilePath != null) {
+            Text(text = "Capturando em:\n$captureFilePath", style = MaterialTheme.typography.bodySmall)
+        } else if (lastCaptureFilePath != null) {
+            Text(text = "Ultima captura:\n$lastCaptureFilePath", style = MaterialTheme.typography.bodySmall)
+        }
+        Button(onClick = onDisconnect, enabled = !isBusy) {
             Text("Desconectar")
         }
     }

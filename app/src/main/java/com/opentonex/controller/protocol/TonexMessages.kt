@@ -12,6 +12,7 @@ class PedalStateParseException(message: String) : Exception(message)
 object TonexMessages {
     /** Tipo de mensagem (offsets 3-4, u16 LE) do StateResponse real do pedal. */
     const val STATE_RESPONSE_TYPE = 0x0306
+    const val PRESET_DETAIL_TYPE = 0x0304
 
     /**
      * Le o tipo de mensagem (header `B9 03 81 [2 bytes LE]`) de uma resposta decodificada.
@@ -30,6 +31,88 @@ object TonexMessages {
 
     /** Mensagem inicial de handshake. Bytes refinados contra captura real na Fase 2. */
     fun helloPayload(): ByteArray = byteArrayOf(0xB9.toByte(), 0x03, 0x81.toByte(), 0x03, 0x00)
+
+    /** Tipo da resposta do pedal ao comando de wake (visto na captura: `B9 03 02 2B 0B ...`). */
+    const val WAKE_RESPONSE_TYPE = 0x0B2B
+
+    /**
+     * Comando de "acordar"/init que o app OFICIAL envia como PRIMEIRO comando ao conectar
+     * (captura tonex_full_session.pcap, OUT #0). Sem ele, a interface serial do pedal fica
+     * dormente e ignora o Hello ate o footswitch ser pressionado fisicamente - era a causa
+     * raiz da "conexao lenta". O pedal responde com um frame tipo 0x0B2B. Ver protocol-notes.md.
+     */
+    fun wakePayload(): ByteArray = byteArrayOf(
+        0xB9.toByte(), 0x03, 0x00, 0x82.toByte(), 0x04, 0x00,
+        0x80.toByte(), 0x0B, 0x01, 0xB9.toByte(), 0x02, 0x02, 0x0B
+    )
+
+    // --- Comando de troca de preset (host->device), tipo 0x0300. Descoberto via captura
+    // USB do app oficial (PC) trocando preset - ver docs/protocol-notes.md, Bug 2. ---
+
+    /** Tipo de mensagem do comando de troca de preset (header `B9 03 81 00 03`). */
+    const val PRESET_SELECT_TYPE = 0x0300
+
+    /** Fase "arm/preview": o app oficial envia esta antes de efetivar. */
+    const val PRESET_PHASE_ARM = 0x00
+
+    /** Fase "commit/load": efetiva a troca. O app envia ARM e depois COMMIT. */
+    const val PRESET_PHASE_COMMIT = 0x01
+
+    /** Comando curto intercalado pelo app oficial entre ARM e COMMIT. */
+    const val PRESET_BRIDGE_STAGE = 0x0A
+
+    /** Variante curta observada ao final de algumas trocas no app oficial. */
+    const val PRESET_SETTLE_STAGE = 0x01
+
+    /**
+     * Envelope constante observado em TODOS os comandos de troca da captura, ate o byte
+     * imediatamente antes do par [presetId, phase]:
+     * `B9 03 81 00 03 | 82 06 00 | 80 0B 03 | B9 04 | 0B 01`.
+     */
+    private val PRESET_SELECT_PREFIX = byteArrayOf(
+        0xB9.toByte(), 0x03, 0x81.toByte(), 0x00, 0x03,
+        0x82.toByte(), 0x06, 0x00,
+        0x80.toByte(), 0x0B, 0x03,
+        0xB9.toByte(), 0x04,
+        0x0B, 0x01
+    )
+
+    private val PRESET_BRIDGE_PREFIX = byteArrayOf(
+        0xB9.toByte(), 0x03, 0x00, 0x82.toByte(), 0x06, 0x00,
+        0x80.toByte(), 0x0B, 0x03, 0xB9.toByte(), 0x02, 0x81.toByte()
+    )
+
+    /**
+     * Monta o payload (sem framing HDLC) de UMA fase do comando de troca de preset.
+     * [presetId] e o ID do preset na biblioteca do pedal (ex.: 0x0C, 0x08, 0x07 na captura);
+     * o mapeamento slot A/B/C -> id vem da colecao de slots do StateResponse 0x0306.
+     */
+    fun selectPresetPayload(presetId: Int, phase: Int): ByteArray {
+        require(presetId in 0..0xFF) { "presetId fora de 0..255: $presetId" }
+        require(phase == PRESET_PHASE_ARM || phase == PRESET_PHASE_COMMIT) {
+            "fase invalida (esperado ARM=0x00 ou COMMIT=0x01): 0x${phase.toString(16)}"
+        }
+        return PRESET_SELECT_PREFIX + byteArrayOf(presetId.toByte(), phase.toByte())
+    }
+
+    /**
+     * As duas fases do comando de troca, na ordem que o app oficial envia (ARM -> COMMIT).
+     * Cada elemento deve ser encapsulado com [HdlcCodec.encode] e escrito em sequencia.
+     */
+    fun selectPresetPayloads(presetId: Int): List<ByteArray> = listOf(
+        selectPresetPayload(presetId, PRESET_PHASE_ARM),
+        selectPresetPayload(presetId, PRESET_PHASE_COMMIT)
+    )
+
+    /**
+     * Comando curto observado no app oficial entre fases da troca.
+     * Ainda nao sabemos o nome semantico real; preservamos os bytes exatamente
+     * como apareceram na captura para o teste no hardware fisico.
+     */
+    fun presetBridgePayload(stage: Int): ByteArray {
+        require(stage in 0..0xFF) { "stage fora de 0..255: $stage" }
+        return PRESET_BRIDGE_PREFIX + byteArrayOf(stage.toByte(), 0x03, 0x0B)
+    }
 
     /**
      * Extrai a versao da resposta de Hello. O pedal devolve um dump de estado binario
@@ -53,18 +136,37 @@ object TonexMessages {
             .map { it.trim() }
             .filter { it.length >= 3 && it.any(Char::isDigit) }
             .maxByOrNull { it.length }
-        return FirmwareInfo(version = version ?: "indisponível")
+        return FirmwareInfo(version = version ?: "ToneX One (versao nao mapeada)")
     }
 
     /**
-     * Regrava o estado completo mudando somente o byte do slot ativo.
-     * Preserva todos os demais bytes (campos ainda nao decifrados).
+     * Tamanho do header de uma resposta StateResponse (`B9 03 81 06 03 80 A0 02`) antes
+     * do corpo dos campos. Descoberto via captura do app oficial trocando preset
+     * (2026-06-25, tonex_isolated_switch.pcap): o COMANDO de troca de slot e o MESMO
+     * corpo, com um header de comando diferente (ver [SET_STATE_COMMAND_SUFFIX]).
+     */
+    private const val STATE_RESPONSE_HEADER_LENGTH = 8
+
+    /**
+     * Sufixo do header do COMANDO de troca de estado (apos o tipo `B9 03 81 06 03`),
+     * substituindo o sufixo `80 A0 02` usado nas RESPOSTAS. Bytes exatos da captura real.
+     */
+    private val SET_STATE_COMMAND_SUFFIX = byteArrayOf(
+        0x82.toByte(), 0xA0.toByte(), 0x00, 0x80.toByte(), 0x0B, 0x03
+    )
+
+    /**
+     * Regrava o estado completo mudando somente o byte do slot ativo, e troca o header
+     * de RESPOSTA pelo header de COMANDO real do app oficial (mesmo corpo, envelope
+     * diferente). [activeSlotOffset] e relativo a [rawState] (inclui o header de resposta).
      */
     fun buildSlotChangePayload(rawState: ByteArray, activeSlotOffset: Int, newSlotValue: Int): ByteArray {
         require(activeSlotOffset in rawState.indices) { "offset de slot fora do estado" }
-        val copy = rawState.copyOf()
-        copy[activeSlotOffset] = newSlotValue.toByte()
-        return copy
+        require(rawState.size > STATE_RESPONSE_HEADER_LENGTH) { "rawState curto demais para conter o header de resposta" }
+        val typeHeader = rawState.copyOfRange(0, 5)
+        val body = rawState.copyOfRange(STATE_RESPONSE_HEADER_LENGTH, rawState.size)
+        body[activeSlotOffset - STATE_RESPONSE_HEADER_LENGTH] = newSlotValue.toByte()
+        return typeHeader + SET_STATE_COMMAND_SUFFIX + body
     }
 
     // --- StateResponse: offsets calibrados contra captura real do pedal
@@ -96,8 +198,31 @@ object TonexMessages {
             a4Reference = walk.a4Reference,
             tempo = walk.tempoBpm.toInt(),
             slots = slots,
-            rawState = payload
+            rawState = payload,
+            presetIds = walk.presetIds
         )
+    }
+
+    /** ID do preset (na biblioteca do pedal) atribuido ao [slot], lido do ultimo [PedalState]. */
+    fun presetIdForSlot(state: PedalState, slot: Slot): Int? = state.presetIds.getOrNull(slotToByte(slot))
+
+    /**
+     * Extrai o nome do preset a partir da notificacao 0x0304 enviada pelo pedal quando
+     * o preset ativo muda. O nome aparece como `BC <len> <ascii...>`.
+     */
+    fun parsePresetNameFromDetail(payload: ByteArray): String? {
+        if (messageType(payload) != PRESET_DETAIL_TYPE) return null
+        for (index in 0 until payload.size - 2) {
+            if ((payload[index].toInt() and 0xFF) != SLOT_COLLECTION_TAG) continue
+            val nameLength = payload[index + 1].toInt() and 0xFF
+            val nameStart = index + 2
+            val nameEnd = nameStart + nameLength
+            if (nameLength == 0 || nameEnd > payload.size) continue
+            val bytes = payload.copyOfRange(nameStart, nameEnd)
+            if (bytes.any { (it.toInt() and 0xFF) !in 0x20..0x7E }) continue
+            return bytes.toString(Charsets.US_ASCII).trim().takeIf { it.isNotEmpty() }
+        }
+        return null
     }
 
     /** Offset absoluto, dentro de [rawState], do byte de slot ativo. */
@@ -121,7 +246,8 @@ object TonexMessages {
         val activeSlotByte: Int,
         val activeSlotOffset: Int,
         val a4Reference: Int,
-        val tempoBpm: Float
+        val tempoBpm: Float,
+        val presetIds: List<Int>
     )
 
     private fun walkFields(payload: ByteArray, fieldsOffset: Int): FieldsWalk {
@@ -164,12 +290,21 @@ object TonexMessages {
         offset++
         val slotBytesCount = payload[offset].toInt() and 0xFF
         offset++
-        offset += slotBytesCount // bytes de slot assignment, ainda nao usados na UI
+        if (slotBytesCount % 2 != 0) {
+            throw PedalStateParseException("colecao de slots com quantidade impar de bytes: $slotBytesCount")
+        }
+        // bytes de slot assignment: presetId (u16 LE) por slot - mapeia slot A/B/C -> id
+        // na biblioteca do pedal. Usado para montar o comando de troca (ver selectPresetPayload).
+        val presetIds = ArrayList<Int>(slotBytesCount / 2)
+        repeat(slotBytesCount / 2) {
+            presetIds.add((payload[offset].toInt() and 0xFF) or ((payload[offset + 1].toInt() and 0xFF) shl 8))
+            offset += 2
+        }
 
+        offset += 1 // byte observado como constante 0x00 nas capturas reais
         val activeSlotOffset = offset
         val activeSlotByte = payload[offset].toInt() and 0xFF
         offset++
-        offset += 1 // campo desconhecido entre o slot ativo e o A4
 
         val a4 = TaggedValue.decodeU16(payload, offset); offset = a4.nextOffset
         offset += 1 // directMonitor (byte cru, ainda nao usado na UI)
@@ -183,7 +318,8 @@ object TonexMessages {
             activeSlotByte = activeSlotByte,
             activeSlotOffset = activeSlotOffset,
             a4Reference = a4.value,
-            tempoBpm = tempo.value
+            tempoBpm = tempo.value,
+            presetIds = presetIds
         )
     }
 

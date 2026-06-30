@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WindowsPerformanceRecorder Version="1.0" Author="TONEX" Comments="Captura USB nativa (ETW) para xHCI - sniff do ToneX One CDC/HDLC">
+  <Profiles>
+    <EventCollector Id="EC_USB" Name="USB Event Collector">
+      <BufferSize Value="1024"/>
+      <Buffers Value="200"/>
+    </EventCollector>
+
+    <!-- Providers USB (GUIDs estaveis do Windows) -->
+    <EventProvider Id="EP_USBPORT"  Name="c88a4ef5-d048-4013-9408-e04b7db2814a"/> <!-- USBPORT (EHCI/2.0) -->
+    <EventProvider Id="EP_USBHUB"   Name="7426a56b-e2d5-4b30-bdef-b31815c1a74a"/> <!-- USBHUB (2.0) -->
+    <EventProvider Id="EP_UCX"      Name="36da592d-e43a-4e28-af6f-4bc57c5a11e8"/> <!-- UCX (xHCI controller ext) -->
+    <EventProvider Id="EP_USBXHCI"  Name="9f7711dd-29ad-c1ee-1b1b-b52a0118a54c"/> <!-- USBXHCI (xHCI driver) -->
+    <EventProvider Id="EP_USBHUB3"  Name="ac52ad17-cc01-4f85-8df5-4dce4333c99b"/> <!-- USBHUB3 (3.0 hub) -->
+    <EventProvider Id="EP_USBCCGP"  Name="bc6c9364-fc67-42c5-acf7-abed3b12ecc6"/> <!-- USBCCGP (composite parent) -->
+
+    <Profile Id="USB.Verbose.File" Name="USB" Description="USB Trace (xHCI verbose)"
+             LoggingMode="File" DetailLevel="Verbose">
+      <Collectors>
+        <EventCollectorId Value="EC_USB">
+          <EventProviders>
+            <EventProviderId Value="EP_USBPORT"/>
+            <EventProviderId Value="EP_USBHUB"/>
+            <EventProviderId Value="EP_UCX"/>
+            <EventProviderId Value="EP_USBXHCI"/>
+            <EventProviderId Value="EP_USBHUB3"/>
+            <EventProviderId Value="EP_USBCCGP"/>
+          </EventProviders>
+        </EventCollectorId>
+      </Collectors>
+    </Profile>
+
+    <Profile Id="USB.Verbose.Memory" Base="USB.Verbose.File" Name="USB"
+             Description="USB Trace (xHCI verbose)" LoggingMode="Memory" DetailLevel="Verbose"/>
+  </Profiles>
+</WindowsPerformanceRecorder>

@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import java.io.File
 import com.opentonex.controller.connection.FakePedalConnection
 import com.opentonex.controller.connection.PedalConnection
 import com.opentonex.controller.connection.UsbPedalConnection
@@ -23,7 +24,8 @@ class MainActivity : ComponentActivity() {
                 ToneXApp(
                     windowSizeClass = windowSizeClass,
                     onCreateRealConnection = { createRealConnection() },
-                    onCreateFakeConnection = { FakePedalConnection() }
+                    onCreateFakeConnection = { FakePedalConnection() },
+                    onResolveCaptureDirectory = { resolveCaptureDirectory() }
                 )
             }
         }
@@ -33,5 +35,10 @@ class MainActivity : ComponentActivity() {
         val manager = getSystemService(UsbManager::class.java)
         val transport = UsbSerialTransport.connect(this, manager) ?: return null
         return UsbPedalConnection(transport)
+    }
+
+    private fun resolveCaptureDirectory(): File {
+        val externalRoot = getExternalFilesDir(null)
+        return File(externalRoot ?: filesDir, "event-captures")
     }
 }

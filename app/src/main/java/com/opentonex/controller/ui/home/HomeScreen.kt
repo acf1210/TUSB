@@ -32,6 +32,8 @@ fun HomeScreen(
     firmwareVersion: String,
     activeSlot: Slot,
     presets: List<PresetSlot>,
+    isBusy: Boolean,
+    busyReason: String?,
     onSelectSlot: (Slot) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -48,16 +50,26 @@ fun HomeScreen(
             Slot.entries.forEach { slot ->
                 FilterChip(
                     selected = slot == activeSlot,
+                    enabled = !isBusy,
                     onClick = { onSelectSlot(slot) },
                     label = { Text(slot.name) }
                 )
             }
+        }
+        if (busyReason != null) {
+            Text(
+                text = busyReason,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(presets, key = { it.index }) { preset ->
                 PresetRow(
                     preset = preset,
                     isActive = preset.index == activeSlot.ordinal,
+                    enabled = !isBusy,
                     onClick = { onSelectSlot(Slot.entries[preset.index]) }
                 )
             }
@@ -66,11 +78,11 @@ fun HomeScreen(
 }
 
 @Composable
-private fun PresetRow(preset: PresetSlot, isActive: Boolean, onClick: () -> Unit) {
+private fun PresetRow(preset: PresetSlot, isActive: Boolean, enabled: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
     ) {
         Row(
             modifier = Modifier

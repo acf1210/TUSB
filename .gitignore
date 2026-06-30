@@ -17,3 +17,7 @@ tonex_diag.txt
 *.pcap
 usbpcap_*.txt
 usbpcap_*.log
+tonex-session-*.jsonl
+
+# Artefato do compilador Kotlin
+.kotlin/

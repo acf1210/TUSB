@@ -31,7 +31,69 @@ Hardware: ToneX One, VID 0x1963 / PID 0x00D1, CDC ACM @ 115200, framing HDLC (0x
   versão confiável, retornar algo honesto (ex.: modelo "ToneX One" ou "—") em vez de
   lixo. Identificar o campo de versão real exige a spec da IK ou sniff do app oficial.
 
-## Bug 2 — troca de slot pela UI do app não muda o preset do pedal
+## Bug 2 — comando de troca de preset — RESOLVIDO de verdade (captura isolada, 2026-06-25)
+
+**CORREÇÃO IMPORTANTE sobre a primeira hipótese (abaixo, mantida como histórico):** a
+sequência `ARM`/`bridge`/`COMMIT`/`settle` com `PRESET ∈ {0x0C,0x08,0x07,...}` **NÃO é o
+comando de troca de slot**. Uma captura mais completa (`tonex_full_session.pcap`, do
+**zero da conexão**) mostrou que essa sequência é, na verdade, um **sweep sequencial de
+TODOS os presetIds (0x00 a 0x13 = 0..19)**, repetido para fase ARM e depois para fase
+COMMIT — ou seja, o app **sincronizando a biblioteca inteira** ao conectar (ARM = busca
+metadados ~2.2KB; COMMIT = busca o modelo completo do preset, ~26KB em vários fragmentos
+de 4096B). Enviar fragmentos dessa sequência ao pedal real deixou-o instável ("modo
+stomp", parou de responder) — **não usar mais esse caminho para troca de slot.**
+`TonexMessages.selectPreset*` / `selectPresetPayload*` ficam disponíveis apenas para uma
+eventual função de "buscar dados de um preset da biblioteca", não para trocar o slot ativo.
+
+### O comando REAL de troca de slot (confirmado, `tonex_isolated_switch.pcap`)
+
+Captura isolada: conectar, esperar o sweep de sincronização terminar, trocar entre os
+slots A→B→C→A **sem mais nenhuma ação**. Os comandos host→device correspondentes (175B,
+endpoint `0x07`) são o **StateResponse completo (tipo `0x0306`) reenviado pelo host**,
+com o byte do slot ativo mutado e um **header de comando diferente do header de resposta**:
+
+```
+RESPOSTA (device→host):  B9 03 81 06 03  80 A0 02  [corpo do estado...]
+COMANDO  (host→device):  B9 03 81 06 03  82 A0 00 80 0B 03  [MESMO corpo, so o byte do slot ativo muda]
+                          └── tipo 0x0306 ──┘  └── sufixo de 6B (era 3B na resposta) ──┘
+```
+
+- O **corpo** (campos de trim, cores, presetIds, slot ativo, A4, tempo) é **idêntico** ao
+  de um StateResponse normal — é literalmente "pegue o último estado conhecido, mude o
+  byte do slot ativo, troque o sufixo do header de `80 A0 02` (resposta) para
+  `82 A0 00 80 0B 03` (comando), envie".
+- Implementado em `TonexMessages.buildSetStatePayload` / `buildSlotChangePayload` e usado
+  por `UsbPedalConnection.writeState()` → `PedalRepository.selectSlot()`.
+- Validado byte a byte contra 3 comandos reais capturados (slot A/B/C) em
+  `TonexMessagesTest.buildSetStatePayload reproduces official app slot-switch capture byte for byte`.
+- **Ainda não testado no hardware físico** (próximo passo).
+
+### Rotina fixa de "query" ao conectar (não confundir com troca de slot)
+
+Logo após o sweep de sincronização, o app sempre envia uma sequência fixa, idêntica em
+toda conexão, independente do que o usuário faz depois (provavelmente "buscar
+estado/preset atual para exibir na UI"): `bridge(0x06)` → resposta state(172B);
+`selectPreset(0x00,COMMIT)` → baixa preset 0 completo (~26KB); `bridge(0x01)` → resposta
+14B; comando novo `B9 03 81 0D 03 82 05 00 80 0B 03 B9 03 03 00 00` (tipo `0x030D`,
+20 bytes) → resposta 21B; `bridge(0x0A)` → resposta 828B; `bridge(0x01)` → rajada de
+state+detail. Não é necessário reproduzir essa rotina para trocar de slot.
+
+### Histórico — primeira hipótese (INCORRETA, captura parcial, mantida para referência)
+
+Captura USB do **app oficial (PC)** obtida via USBPcap (`tonexfinal_official.pcap`,
+367 KB, LinkType 249), só que **sem o início da conexão** — por isso o sweep de
+sincronização da biblioteca foi confundido com "o usuário trocando 3 presets":
+
+Payload (ANTES do framing HDLC), 17 bytes:
+```
+B9 03 81 00 03  82 06 00  80 0B 03  B9 04  0B 01  [PRESET]  [PHASE]
+└── header ───┘  └─ envelope constante ──┘         └────── varia ──────┘
+   tipo 0x0300
+```
+Isso é, na verdade, o comando "buscar preset N da biblioteca" (ver seção acima), não a
+troca de slot.
+
+### Histórico — diagnóstico original do Bug 2 (notificação device→host)
 
 - O footswitch troca o preset e o pedal faz PUSH de um frame `0x0304` (notificação
   device→host) com o novo preset. Durante a captura alternou entre:
@@ -54,9 +116,52 @@ Hardware: ToneX One, VID 0x1963 / PID 0x00D1, CDC ACM @ 115200, framing HDLC (0x
   preset** — via USBPcap (que falhou nesta sessão; precisa de `-I` para hub USB 3.0
   e/ou execução elevada) ou outro sniffer USB.
 
-## Status da captura USB (2026-06-25) — BLOQUEADO
+## Bug 3 — conexão lenta (só conectava após ~10 toques / footswitch) — CAUSA RAIZ CONFIRMADA (2026-06-30)
 
-Tentativas de USBPcap nesta maquina falharam (5+ vezes). Diagnostico final:
+**Sintoma:** o app só conectava depois de ~10 toques em "Conectar", ou se o usuário
+apertasse o footswitch do pedal. O app oficial conecta sem footswitch.
+
+**Causa raiz:** a interface serial do pedal fica **dormente** e ignora o nosso Hello
+(`B9 03 81 03 00`) até ser "acordada". O footswitch acorda (gera atividade); o app oficial
+acorda enviando um **comando de init** como PRIMEIRO comando ao conectar — que o nosso app
+nunca enviava. Extraído de `tonex_full_session.pcap` (OUT #0, conexão do zero):
+
+```
+WAKE (host→device): B9 03 00 82 04 00 80 0B 01 B9 02 02 0B   (tipo 0x0482, CRC 17 8C)
+resp (device→host): B9 03 02 2B 0B ...  (52B, tipo 0x0B2B)   = pedal acordou
+```
+
+Só depois disso o app oficial faz o sweep da biblioteca. CRC do nosso wake validado byte a
+byte contra a captura. Implementado em `TonexMessages.wakePayload()`; o handshake envia
+**wake → (0x0B2B) → Hello → (0x0306)**.
+
+**Evidência de timing (capturas JSONL on-device):** round-trips, quando o comando chega, são
+de 4–120ms (instantâneo). Mas os comandos são **descartados ~50%** no nível do USB Android, e
+**o 1º comando após abrir a porta quase sempre cai** (porta "fria"). Por isso o handshake faz
+várias tentativas internas (reabrindo a porta) por toque — ver `UsbPedalConnection.HANDSHAKE_ATTEMPTS`.
+
+**Correções relacionadas (mesma frente):**
+- Connect passou de 2 round-trips para 1: o Hello já devolve o 0x0306 completo (firmware +
+  estado), então não há `requestState()` separado ao conectar.
+- Captura: o coletor de `runtimeEvents` agora aguarda a inscrição antes do handshake emitir
+  (`SharedFlow` sem replay descartava os eventos de hello/estado — por isso "hello" não
+  aparecia nas capturas). A captura também não para mais ao desconectar.
+
+## Status da captura USB (2026-06-25) — DESBLOQUEADO ✅
+
+Captura do app oficial **obtida** (`tonexfinal_official.pcap`, 367 KB). O comando de troca
+de preset foi extraído e está documentado acima (Bug 2 RESOLVIDO). Ferramentas de análise
+(sem depender de tshark/Wireshark) em `tools/`:
+- `parse-usbpcap.ps1` — dump geral de transfers com payload.
+- `parse-out.ps1` — só comandos host→device (bulk OUT).
+- `timeline.ps1` / `types.ps1` — correlação temporal e histograma de tipos.
+
+Alternativa nativa (caso USBPcap volte a falhar em xHCI): captura ETW via `wpr.exe` com o
+perfil `tools/usb-trace.wprp` (providers UCX/USBXHCI/USBHUB3), decodificável por `tracerpt`.
+
+### Histórico do bloqueio (USBPcap em xHCI/USB 3.0)
+
+Tentativas anteriores de USBPcap falharam (5+ vezes). Diagnostico:
 - O pedal enumera num **root hub USB 3.0 (xHCI / ROOT_HUB30)**, em `\\.\USBPcap2`.
 - **Elevado:** USBPcapCMD abre o device mas captura **0 pacotes** (so o header de 24 B) —
   limitacao conhecida do USBPcap em xHCI (exige setup de `NonStandardHWIDs` + reconectar).
