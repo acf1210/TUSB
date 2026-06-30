@@ -131,22 +131,10 @@ class UsbPedalConnection(
     }
 
     override suspend fun selectPreset(presetId: Int) {
-        // O app oficial nao envia apenas ARM -> COMMIT em rajada. A captura mostrou
-        // um comando curto intercalado (0x0A) entre as fases, e pequenas pausas
-        // parecem ajudar o hardware real a processar a troca.
-        val steps = listOf(
-            "select_preset_arm" to TonexMessages.selectPresetPayload(presetId, TonexMessages.PRESET_PHASE_ARM),
-            "select_preset_bridge" to TonexMessages.presetBridgePayload(TonexMessages.PRESET_BRIDGE_STAGE),
-            "select_preset_commit" to TonexMessages.selectPresetPayload(presetId, TonexMessages.PRESET_PHASE_COMMIT),
-            "select_preset_settle" to TonexMessages.presetBridgePayload(TonexMessages.PRESET_SETTLE_STAGE)
-        )
-        steps.forEachIndexed { index, (requestKind, payload) ->
-            emitRequestEvent(requestKind = requestKind, payload = payload)
-            transport.write(HdlcCodec.encode(payload))
-            if (index != steps.lastIndex) {
-                delay(PRESET_COMMAND_STEP_DELAY_MS)
-            }
-        }
+        val payload = byteArrayOf(0xF0.toByte(), presetId.toByte(), 0xF7.toByte(), 0x05, 0x00, 0x01)
+        android.util.Log.d("ToneXConn", "selectPreset presetId=0x${presetId.toString(16)} payload=${payload.joinToString(" ") { "%02X".format(it) }}")
+        emitRequestEvent(requestKind = "select_preset", payload = payload)
+        transport.write(payload)
     }
 
     override suspend fun disconnect() {

@@ -5,8 +5,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
+import android.hardware.usb.UsbEndpoint
+import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import androidx.core.content.ContextCompat
 import com.hoho.android.usbserial.driver.UsbSerialDriver
@@ -44,6 +47,16 @@ class UsbSerialTransport private constructor(
 
     private var port: UsbSerialPort? = null
     private var usbConnection: UsbDeviceConnection? = null
+    // Endpoint MIDI OUT (USB Audio class, subclass MIDISTREAMING). Null se o device
+    // nao expoe interface MIDI — nesse caso writeDirect lanca IOException.
+    private val midiInterface: UsbInterface?
+    private val midiOutEndpoint: UsbEndpoint?
+
+    init {
+        val result = findMidiOutEndpoint(driver.device)
+        midiInterface = result?.first
+        midiOutEndpoint = result?.second
+    }
 
     /** (Re)abre a porta serial do zero: nova UsbDeviceConnection + port.open + DTR/RTS + settle. */
     override suspend fun open() = withContext(Dispatchers.IO) {
@@ -57,6 +70,8 @@ class UsbSerialTransport private constructor(
         // Muitos dispositivos CDC ACM ficam mudos até o host afirmar DTR/RTS.
         serialPort.dtr = true
         serialPort.rts = true
+        // Reclama a interface MIDI na mesma UsbDeviceConnection (endpoints separados, mesmo device).
+        midiInterface?.let { connection.claimInterface(it, true) }
         // Settle + flush espelham a ferramenta PC conhecida-boa (sleep apos abrir) antes do 1o Hello.
         delay(PORT_SETTLE_MS)
         runCatching { serialPort.purgeHwBuffers(true, true) }
@@ -104,7 +119,15 @@ class UsbSerialTransport private constructor(
         closeBlocking()
     }
 
+    override suspend fun writeDirect(bytes: ByteArray): Unit = withContext(Dispatchers.IO) {
+        val ep = midiOutEndpoint ?: throw IOException("endpoint MIDI OUT nao encontrado no pedal")
+        val conn = usbConnection ?: throw IOException("conexao USB nao esta aberta")
+        conn.bulkTransfer(ep, bytes, bytes.size, IO_TIMEOUT_MS)
+        Unit
+    }
+
     private fun closeBlocking() {
+        midiInterface?.let { runCatching { usbConnection?.releaseInterface(it) } }
         runCatching { port?.close() }
         runCatching { usbConnection?.close() }
         port = null
@@ -131,6 +154,28 @@ class UsbSerialTransport private constructor(
 
             val driver = UsbSerialProber.getDefaultProber().probeDevice(device) ?: return null
             return UsbSerialTransport(manager, driver)
+        }
+
+        /** Localiza a interface MIDI Streaming (Audio class 0x01, subclass 0x03) e seu endpoint bulk OUT. */
+        private fun findMidiOutEndpoint(device: UsbDevice): Pair<UsbInterface, UsbEndpoint>? {
+            android.util.Log.d("ToneXUsb", "device interfaces: ${device.interfaceCount}")
+            for (i in 0 until device.interfaceCount) {
+                val iface = device.getInterface(i)
+                android.util.Log.d("ToneXUsb", "  iface[$i] class=${iface.interfaceClass} sub=${iface.interfaceSubclass} endpoints=${iface.endpointCount}")
+                for (j in 0 until iface.endpointCount) {
+                    val ep = iface.getEndpoint(j)
+                    android.util.Log.d("ToneXUsb", "    ep[$j] addr=0x${ep.address.toString(16)} type=${ep.type} dir=${ep.direction}")
+                }
+                if (iface.interfaceClass == UsbConstants.USB_CLASS_AUDIO && iface.interfaceSubclass == 3) {
+                    for (j in 0 until iface.endpointCount) {
+                        val ep = iface.getEndpoint(j)
+                        if (ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK && ep.direction == UsbConstants.USB_DIR_OUT) {
+                            return iface to ep
+                        }
+                    }
+                }
+            }
+            return null
         }
 
         private suspend fun requestPermission(context: Context, manager: UsbManager, device: UsbDevice): Boolean =

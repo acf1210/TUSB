@@ -127,15 +127,16 @@ class PedalRepositoryTest {
         repo.disconnect()
     }
 
-    @Test fun `selectSlot sends the rewritten state through writeState`() = runTest {
+    @Test fun `selectSlot envia selectPreset com o presetId do slot`() = runTest {
         val connection = RecordingPedalConnection()
         val repo = PedalRepository(connection, this)
 
         repo.connect()
         repo.selectSlot(Slot.C)
 
-        assertEquals(1, connection.writeStateCalls)
-        assertEquals(null, connection.lastSelectedPresetId)
+        assertEquals(0, connection.writeStateCalls)
+        // FakePedalConnection.presetIds = [0x0C, 0x08, 0x07] -> slot C = indice 2 = 0x07
+        assertEquals(0x07, connection.lastSelectedPresetId)
         repo.disconnect()
     }
 

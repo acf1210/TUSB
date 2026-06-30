@@ -21,8 +21,11 @@ private class FakePedalTransport : PedalTransport {
     var failReadsBeforeSuccess = 0
     private var failedReads = 0
 
+    val directWritten = mutableListOf<ByteArray>()
+
     override suspend fun open() { opened = true }
     override suspend fun write(bytes: ByteArray) { written.add(bytes) }
+    override suspend fun writeDirect(bytes: ByteArray) { directWritten.add(bytes) }
     override suspend fun readFrame(timeoutMs: Long): ByteArray {
         if (failedReads < failReadsBeforeSuccess) {
             failedReads++
@@ -170,28 +173,16 @@ class UsbPedalConnectionTest {
         assertEquals(presetName, state.slots[Slot.B.ordinal].name)
     }
 
-    @Test fun `selectPreset writes the ARM then COMMIT frames for the given presetId`() = runTest {
+    @Test fun `selectPreset envia 6 bytes raw no CDC serial sem framing HDLC`() = runTest {
         val transport = FakePedalTransport()
         val connection = UsbPedalConnection(transport)
 
-        connection.selectPreset(0x07)
+        connection.selectPreset(0x0D)
 
-        assertEquals(4, transport.written.size)
+        assertEquals(1, transport.written.size)
         assertArrayEquals(
-            HdlcCodec.encode(TonexMessages.selectPresetPayload(0x07, TonexMessages.PRESET_PHASE_ARM)),
+            byteArrayOf(0xF0.toByte(), 0x0D.toByte(), 0xF7.toByte(), 0x05, 0x00, 0x01),
             transport.written[0]
-        )
-        assertArrayEquals(
-            HdlcCodec.encode(TonexMessages.presetBridgePayload(TonexMessages.PRESET_BRIDGE_STAGE)),
-            transport.written[1]
-        )
-        assertArrayEquals(
-            HdlcCodec.encode(TonexMessages.selectPresetPayload(0x07, TonexMessages.PRESET_PHASE_COMMIT)),
-            transport.written[2]
-        )
-        assertArrayEquals(
-            HdlcCodec.encode(TonexMessages.presetBridgePayload(TonexMessages.PRESET_SETTLE_STAGE)),
-            transport.written[3]
         )
     }
 

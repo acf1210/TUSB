@@ -31,12 +31,12 @@ private class BlockingSelectPedalConnection : PedalConnection {
 
     override suspend fun requestState(): PedalState = delegate.requestState()
 
-    override suspend fun writeState(state: PedalState) {
-        selectGate.await()
-        delegate.writeState(state)
-    }
+    override suspend fun writeState(state: PedalState) = delegate.writeState(state)
 
-    override suspend fun selectPreset(presetId: Int) = delegate.selectPreset(presetId)
+    override suspend fun selectPreset(presetId: Int) {
+        selectGate.await()
+        delegate.selectPreset(presetId)
+    }
 
     override suspend fun disconnect() = delegate.disconnect()
 

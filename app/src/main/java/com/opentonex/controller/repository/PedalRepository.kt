@@ -6,6 +6,7 @@ import com.opentonex.controller.connection.PedalRuntimeEvent
 import com.opentonex.controller.domain.FirmwareInfo
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.Slot
+import com.opentonex.controller.protocol.TonexMessages
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -52,11 +53,17 @@ class PedalRepository(
     suspend fun selectSlot(slot: Slot) {
         val current = _state.value as? ConnectionState.Connected ?: return
         recordLocalAction("select_slot", mapOf("slot" to slot.name))
-        // Comando real: reenviar o ultimo estado conhecido com o slot ativo trocado
-        // (ver TonexMessages.buildSetStatePayload / docs/protocol-notes.md, Bug 2 resolvido).
-        connection.writeState(current.pedal.withTrustedPresetIds().withActiveSlot(slot))
+        // Update otimistico imediato: garante feedback visual mesmo que o presetId nao
+        // tenha sido parseado (ex: offset errado no StateResponse).
         lastConfirmedActiveSlot = slot
-        _state.value = current.copy(pedal = reconcilePedal(connection.requestState()))
+        _state.value = current.copy(pedal = reconcilePedal(current.pedal.withActiveSlot(slot)))
+        val enrichedPedal = current.pedal.withTrustedPresetIds()
+        val presetId = TonexMessages.presetIdForSlot(enrichedPedal, slot)
+        android.util.Log.d("ToneXRepo", "selectSlot=$slot presetId=$presetId stableIds=$stablePresetIds rawIds=${current.pedal.presetIds}")
+        if (presetId != null) {
+            connection.selectPreset(presetId)
+        }
+        recordLocalAction("select_preset_attempt", mapOf("slot" to slot.name, "presetId" to (presetId ?: "null")))
     }
 
     suspend fun refreshState() {
