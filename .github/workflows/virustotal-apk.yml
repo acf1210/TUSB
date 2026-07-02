@@ -186,9 +186,17 @@ EOF
           gh release upload "${{ steps.release.outputs.tag }}" VIRUSTOTAL.md --clobber
 
       - name: Update release notes
+        env:
+          APK_NAME: ${{ steps.apk.outputs.name }}
+          APK_SHA256: ${{ steps.apk.outputs.sha256 }}
+          VT_MALICIOUS: ${{ steps.vt.outputs.malicious }}
+          VT_SUSPICIOUS: ${{ steps.vt.outputs.suspicious }}
+          VT_UNDETECTED: ${{ steps.vt.outputs.undetected }}
+          VT_UNSUPPORTED: ${{ steps.vt.outputs.type_unsupported }}
         run: |
           gh release view "${{ steps.release.outputs.tag }}" --json body --jq .body > release-body.md
           python - <<'PY'
+import os
 from pathlib import Path
 
 start = "<!-- VIRUSTOTAL-RESULT:START -->"
@@ -199,6 +207,13 @@ if start in body and end in body:
     after = body.split(end, 1)[1].lstrip()
     body = (before + "\n\n" + after).strip()
 
+apk_name = os.environ["APK_NAME"]
+apk_sha256 = os.environ["APK_SHA256"]
+malicious = os.environ["VT_MALICIOUS"]
+suspicious = os.environ["VT_SUSPICIOUS"]
+undetected = os.environ["VT_UNDETECTED"]
+unsupported = os.environ["VT_UNSUPPORTED"]
+
 block = f"""{start}
 ## VirusTotal
 
@@ -206,12 +221,12 @@ PT-BR: resultado VirusTotal publicado automaticamente para o APK desta release.
 EN-US: VirusTotal result automatically published for this release APK.
 ES: resultado de VirusTotal publicado automaticamente para el APK de esta release.
 
-- APK: `${{ steps.apk.outputs.name }}`
-- SHA-256: `${{ steps.apk.outputs.sha256 }}`
-- PT-BR: `${{ steps.vt.outputs.malicious }}` malicioso / `${{ steps.vt.outputs.suspicious }}` suspeito / `${{ steps.vt.outputs.undetected }}` nao detectado / `${{ steps.vt.outputs.type_unsupported }}` nao suportado
-- EN-US: `${{ steps.vt.outputs.malicious }}` malicious / `${{ steps.vt.outputs.suspicious }}` suspicious / `${{ steps.vt.outputs.undetected }}` undetected / `${{ steps.vt.outputs.type_unsupported }}` unsupported
-- ES: `${{ steps.vt.outputs.malicious }}` malicioso / `${{ steps.vt.outputs.suspicious }}` sospechoso / `${{ steps.vt.outputs.undetected }}` no detectado / `${{ steps.vt.outputs.type_unsupported }}` no soportado
-- Report: https://www.virustotal.com/gui/file/${{ steps.apk.outputs.sha256 }}
+- APK: `{apk_name}`
+- SHA-256: `{apk_sha256}`
+- PT-BR: `{malicious}` malicioso / `{suspicious}` suspeito / `{undetected}` nao detectado / `{unsupported}` nao suportado
+- EN-US: `{malicious}` malicious / `{suspicious}` suspicious / `{undetected}` undetected / `{unsupported}` unsupported
+- ES: `{malicious}` malicioso / `{suspicious}` sospechoso / `{undetected}` no detectado / `{unsupported}` no soportado
+- Report: https://www.virustotal.com/gui/file/{apk_sha256}
 - Release asset: `VIRUSTOTAL.md`
 {end}"""
 
