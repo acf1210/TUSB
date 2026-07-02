@@ -3,22 +3,28 @@ package com.opentonex.controller.repository
 import com.opentonex.controller.capture.EventCaptureRecorder
 import com.opentonex.controller.connection.PedalConnection
 import com.opentonex.controller.connection.PedalRuntimeEvent
+import com.opentonex.controller.connection.UsbPedalConnection
 import com.opentonex.controller.domain.FirmwareInfo
 import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.Slot
+import com.opentonex.controller.domain.TonexParam
 import com.opentonex.controller.protocol.TonexMessages
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 sealed interface ConnectionState {
     data object Disconnected : ConnectionState
@@ -31,16 +37,23 @@ class PedalRepository(
 ) {
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val state: StateFlow<ConnectionState> = _state.asStateFlow()
+
+    /** Notificacoes 0x0309 do pedal (knob fisico girado), ja decodificadas, para a UI reagir. */
+    private val _parameterChanges =
+        MutableSharedFlow<PedalRuntimeEvent.ParameterChanged>(extraBufferCapacity = 64)
+    val parameterChanges: SharedFlow<PedalRuntimeEvent.ParameterChanged> =
+        _parameterChanges.asSharedFlow()
     private var eventRecorder: EventCaptureRecorder? = null
     private var runtimeEventsJob: Job? = null
     private var lastConfirmedActiveSlot: Slot? = null
     private var stablePresetIds: List<Int>? = null
+    private val operationMutex = Mutex()
 
     fun attachCaptureRecorder(recorder: EventCaptureRecorder?) {
         eventRecorder = recorder
     }
 
-    suspend fun connect() {
+    suspend fun connect() = operationMutex.withLock {
         recordLocalAction("connect")
         startRuntimeEventsCollection()
         connection.connect()
@@ -51,7 +64,7 @@ class PedalRepository(
         _state.value = ConnectionState.Connected(handshake.firmware, handshake.state)
     }
 
-    suspend fun selectSlot(slot: Slot) {
+    suspend fun selectSlot(slot: Slot) = operationMutex.withLock {
         val current = _state.value as? ConnectionState.Connected ?: return
         recordLocalAction("select_slot", mapOf("slot" to slot.name))
         // Update otimistico imediato: garante feedback visual mesmo que o presetId nao
@@ -65,21 +78,89 @@ class PedalRepository(
         recordLocalAction("select_preset_attempt", mapOf("slot" to slot.name, "presetId" to (presetId ?: "null")))
     }
 
-    suspend fun switchMode(targetMode: PedalMode) {
+    suspend fun loadPresetToActiveSlot(presetId: Int) = operationMutex.withLock {
+        val current = _state.value as? ConnectionState.Connected ?: return
+        val slot = current.pedal.activeSlot
+        recordLocalAction("load_preset_to_slot", mapOf("presetId" to presetId, "slot" to slot.name))
+        val updatedPedal = current.pedal.withPresetInSlot(presetId, slot, selectSlot = true)
+        lastConfirmedActiveSlot = slot
+        stablePresetIds = updatedPedal.presetIds.takeIf { it.isNotEmpty() }
+        _state.value = current.copy(pedal = updatedPedal)
+        connection.loadPresetToSlot(current.pedal, presetId, slot, selectSlot = true)
+    }
+
+    suspend fun toggleBypass() = operationMutex.withLock {
+        val current = _state.value as? ConnectionState.Connected ?: return
+        val newBypass = !current.pedal.bypassMode
+        recordLocalAction("toggle_bypass", mapOf("bypass" to newBypass))
+        // Otimista: atualiza UI antes da resposta do hardware.
+        _state.value = current.copy(pedal = current.pedal.withBypassMode(newBypass))
+        val conn = connection
+        if (conn is com.opentonex.controller.connection.UsbPedalConnection) {
+            conn.writeBypass(current.pedal, newBypass)
+        }
+    }
+
+    suspend fun toggleCabSimBypass() = operationMutex.withLock {
+        val current = _state.value as? ConnectionState.Connected ?: return
+        val newBypass = !current.pedal.cabSimBypass
+        recordLocalAction("toggle_cab_sim_bypass", mapOf("bypass" to newBypass))
+        _state.value = current.copy(pedal = current.pedal.withCabSimBypass(newBypass))
+        val conn = connection
+        if (conn is com.opentonex.controller.connection.UsbPedalConnection) {
+            conn.writeCabSimBypass(current.pedal, newBypass)
+        }
+    }
+
+    suspend fun switchMode(targetMode: PedalMode) = operationMutex.withLock {
         val current = _state.value as? ConnectionState.Connected ?: return
         recordLocalAction("switch_mode", mapOf("target" to targetMode.name))
         connection.switchMode(current.pedal, targetMode)
-        val newState = connection.requestState()
-        _state.value = current.copy(pedal = reconcilePedal(newState).copy(pedalMode = TonexMessages.detectMode(newState)))
+        _state.value = current.copy(pedal = current.pedal.withPedalMode(targetMode))
+    }
+
+    /** Escreve [value] (valor REAL, ex.: gain 0..10) no parametro [param] do preset ativo. */
+    suspend fun writeParameter(param: TonexParam, value: Float) =
+        writeParameterIndex(param.index, value)
+
+    /**
+     * Escreve por indice bruto da tabela tonex_params. Usado pelos controles de efeito
+     * com indice dinamico por modelo (reverb/modulacao/delay - ver TonexEffectParams).
+     */
+    suspend fun writeParameterIndex(index: Int, value: Float) = operationMutex.withLock {
+        val current = _state.value as? ConnectionState.Connected ?: return
+        recordLocalAction("write_parameter", mapOf("index" to index, "value" to value))
+        connection.writeParameter(index, value)
+        // Write-through local: o pedal nao reenvia o 0x0304 apos a escrita; sem isto o
+        // re-sync do poll restaurava o valor antigo (toggles de efeito nao desativavam).
+        _state.value = current.copy(pedal = current.pedal.withParameterValue(index, value))
     }
 
     suspend fun refreshState() {
+        syncState(recordAction = true)
+    }
+
+    suspend fun syncStateFromPedal() {
+        val conn = connection as? UsbPedalConnection
+        if (conn == null) {
+            syncState(recordAction = false)
+            return
+        }
+        operationMutex.withLock {
+            val current = _state.value as? ConnectionState.Connected ?: return
+            // Drena a rajada inteira (knob fisico gera dezenas de 0x0309 entre polls).
+            val passiveState = conn.drainPassiveFrames() ?: return
+            _state.value = current.copy(pedal = reconcilePedal(passiveState))
+        }
+    }
+
+    private suspend fun syncState(recordAction: Boolean) = operationMutex.withLock {
         val current = _state.value as? ConnectionState.Connected ?: return
-        recordLocalAction("refresh_state")
+        if (recordAction) recordLocalAction("refresh_state")
         _state.value = current.copy(pedal = reconcilePedal(connection.requestState()))
     }
 
-    suspend fun disconnect() {
+    suspend fun disconnect() = operationMutex.withLock {
         recordLocalAction("disconnect")
         runtimeEventsJob?.cancel()
         runtimeEventsJob = null
@@ -120,11 +201,17 @@ class PedalRepository(
         when (event) {
             is PedalRuntimeEvent.PresetDetailReceived -> {
                 val current = _state.value as? ConnectionState.Connected ?: return
-                _state.value = current.copy(pedal = current.pedal.withActivePresetName(event.name))
+                _state.value = current.copy(
+                    pedal = current.pedal.withActivePresetName(event.name)
+                        .withActivePresetParameters(event.parameters)
+                )
             }
             is PedalRuntimeEvent.StateReceived -> {
                 val current = _state.value as? ConnectionState.Connected ?: return
                 _state.value = current.copy(pedal = reconcilePedal(event.state))
+            }
+            is PedalRuntimeEvent.ParameterChanged -> {
+                _parameterChanges.tryEmit(event)
             }
             PedalRuntimeEvent.Disconnected -> {
                 lastConfirmedActiveSlot = null

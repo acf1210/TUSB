@@ -1,6 +1,7 @@
 package com.opentonex.controller.connection
 
 import com.opentonex.controller.domain.FirmwareInfo
+import com.opentonex.controller.domain.LibraryPreset
 import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.PresetSlot
@@ -22,6 +23,17 @@ class FakePedalConnection : PedalConnection {
             PresetSlot(1, "Preset B", Rgb(0, 255, 0)),
             PresetSlot(2, "Preset C", Rgb(0, 0, 255))
         ),
+        libraryPresets = (0 until 20).map { index ->
+            LibraryPreset(
+                index = index,
+                name = "Preset ${index + 1}",
+                color = when (index % 3) {
+                    0 -> Rgb(255, 80, 56)
+                    1 -> Rgb(46, 204, 113)
+                    else -> Rgb(52, 152, 219)
+                }
+            )
+        },
         presetIds = listOf(0x0C, 0x08, 0x07)
     )
 
@@ -72,6 +84,43 @@ class FakePedalConnection : PedalConnection {
             )
         )
     }
+
+    override suspend fun loadPresetToSlot(
+        currentState: PedalState,
+        presetId: Int,
+        slot: Slot,
+        selectSlot: Boolean
+    ) {
+        val ids = state.presetIds.toMutableList()
+        while (ids.size < Slot.entries.size) ids.add(0)
+        ids[slot.ordinal] = presetId
+        val updatedSlots = state.slots.mapIndexed { index, preset ->
+            if (index == slot.ordinal) preset.copy(name = "Preset ${presetId + 1}") else preset
+        }
+        state = state.copy(
+            activeSlot = if (selectSlot) slot else state.activeSlot,
+            presetIds = ids,
+            slots = updatedSlots,
+            pedalMode = if (slot == Slot.C) PedalMode.STOMP else state.pedalMode,
+            bypassMode = false
+        )
+    }
+
+    override suspend fun writeParameter(paramIndex: Int, value: Float) {
+        parameters[paramIndex] = value
+        events.tryEmit(
+            PedalRuntimeEvent.ParameterChanged(
+                paramIndex = paramIndex,
+                value = value,
+                messageType = 0x0309,
+                payloadHex = ""
+            )
+        )
+    }
+
+    /** Ultimo valor escrito por indice de parametro (inspecionavel nos testes). */
+    val parameters = mutableMapOf<Int, Float>()
+
     override suspend fun disconnect() {
         events.tryEmit(PedalRuntimeEvent.Disconnected)
     }

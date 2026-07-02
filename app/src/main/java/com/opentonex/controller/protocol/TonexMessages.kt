@@ -1,6 +1,7 @@
 package com.opentonex.controller.protocol
 
 import com.opentonex.controller.domain.FirmwareInfo
+import com.opentonex.controller.domain.LibraryPreset
 import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.PresetSlot
@@ -27,11 +28,21 @@ object TonexMessages {
         return (payload[3].toInt() and 0xFF) or ((payload[4].toInt() and 0xFF) shl 8)
     }
 
-    /** Header documentado do request de estado: 0x81 0x06 0x03. */
-    fun requestStatePayload(): ByteArray = byteArrayOf(0x81.toByte(), 0x06, 0x03)
-
     /** Mensagem inicial de handshake. Bytes refinados contra captura real na Fase 2. */
     fun helloPayload(): ByteArray = byteArrayOf(0xB9.toByte(), 0x03, 0x81.toByte(), 0x03, 0x00)
+
+    /**
+     * RequestState canonico dos firmwares de referencia (identico em `usb_tonex_one.c`
+     * do Builty/TonexOneController e `tonex.cpp` do vit3k/tonex_controller — duas fontes
+     * independentes). NAO esta ligado ao fluxo de conexao: o [helloPayload] de 5B ja foi
+     * validado no hardware fisico e tambem devolve o estado 0x0306. Mantido aqui como
+     * alternativa pronta para teste A/B com o pedal, caso o de 5B falhe em algum firmware.
+     * Ver docs/protocol-notes.md (validacao cruzada).
+     */
+    fun requestStatePayload(): ByteArray = byteArrayOf(
+        0xB9.toByte(), 0x03, 0x00, 0x82.toByte(), 0x06, 0x00,
+        0x80.toByte(), 0x0B, 0x03, 0xB9.toByte(), 0x02, 0x81.toByte(), 0x06, 0x03, 0x0B
+    )
 
     /** Tipo da resposta do pedal ao comando de wake (visto na captura: `B9 03 02 2B 0B ...`). */
     const val WAKE_RESPONSE_TYPE = 0x0B2B
@@ -106,6 +117,15 @@ object TonexMessages {
     )
 
     /**
+     * Comando cru de troca de preset usado pelo firmware USB de referencia
+     * (`usb_tonex_one.c`). Ele trafega sem framing HDLC.
+     */
+    fun rawPresetSelectPayload(presetId: Int): ByteArray {
+        require(presetId in 0..0xFF) { "presetId fora de 0..255: $presetId" }
+        return byteArrayOf(0xF0.toByte(), presetId.toByte(), 0xF7.toByte(), 0x05, 0x00, 0x01)
+    }
+
+    /**
      * Comando curto observado no app oficial entre fases da troca.
      * Ainda nao sabemos o nome semantico real; preservamos os bytes exatamente
      * como apareceram na captura para o teste no hardware fisico.
@@ -113,6 +133,98 @@ object TonexMessages {
     fun presetBridgePayload(stage: Int): ByteArray {
         require(stage in 0..0xFF) { "stage fora de 0..255: $stage" }
         return PRESET_BRIDGE_PREFIX + byteArrayOf(stage.toByte(), 0x03, 0x0B)
+    }
+
+    // --- Parametros de preset (tipo 0x0309). Layout confirmado por DUAS fontes: o firmware
+    // Builty/usb_tonex_one.c (usb_tonex_one_send_single_parameter) e a captura real de knob
+    // fisico deste projeto (tonex-session-1782930773375.jsonl: indice 0x15=21=volume, floats
+    // 0..10). Payload: `B9 04 02 00 <indice> 88 <float LE 4B>`. Ver docs/protocol-notes.md. ---
+
+    /** Tipo das mensagens de parametro: notificacao de knob fisico E escrita de parametro. */
+    const val PARAM_CHANGE_TYPE = 0x0309
+
+    /** Um parametro de preset: indice na tabela tonex_params + valor float real do pedal. */
+    data class ParameterChange(val index: Int, val value: Float)
+
+    /** Prefixo do payload de parametro, comum a notificacao e escrita. */
+    private val PARAM_PAYLOAD_PREFIX = byteArrayOf(0xB9.toByte(), 0x04, 0x02, 0x00)
+
+    /** Marcador que antecede todo float de 4B LE no protocolo do pedal. */
+    private const val FLOAT_MARKER = 0x88
+
+    /**
+     * Header do comando de escrita de parametro unico: tipo 0x0309 + sufixo de comando
+     * com tamanho fixo 0x000A (10B de payload). Nao reenvia o preset inteiro.
+     */
+    private val SET_PARAM_HEADER = byteArrayOf(
+        0xB9.toByte(), 0x03, 0x81.toByte(), 0x09, 0x03,
+        0x82.toByte(), 0x0A, 0x00, 0x80.toByte(), 0x0B, 0x03
+    )
+
+    /** Marcador do inicio do bloco de floats de parametros no detalhe de preset 0x0304. */
+    private val PARAM_BLOCK_MARKER = byteArrayOf(0xBA.toByte(), 0x03, 0xBA.toByte(), 0x6D)
+
+    /** Monta o comando (sem framing HDLC) que escreve UM parametro no preset ativo. */
+    fun buildSetParameterPayload(index: Int, value: Float): ByteArray {
+        require(index in 0..0xFF) { "indice de parametro fora de 0..255: $index" }
+        return SET_PARAM_HEADER + PARAM_PAYLOAD_PREFIX +
+            byteArrayOf(index.toByte(), FLOAT_MARKER.toByte()) + floatToLeBytes(value)
+    }
+
+    /**
+     * Decodifica uma mensagem 0x0309 (knob fisico girado no pedal) em [ParameterChange].
+     * Retorna null se o payload nao for 0x0309 ou nao contiver o padrao esperado.
+     */
+    fun parseParameterChange(payload: ByteArray): ParameterChange? {
+        if (payload.size < 5 || messageType(payload) != PARAM_CHANGE_TYPE) return null
+        val start = indexOfSequence(payload, PARAM_PAYLOAD_PREFIX) ?: return null
+        val indexPos = start + PARAM_PAYLOAD_PREFIX.size
+        if (indexPos + 6 > payload.size) return null // indice + marcador + 4B float
+        if ((payload[indexPos + 1].toInt() and 0xFF) != FLOAT_MARKER) return null
+        return ParameterChange(
+            index = payload[indexPos].toInt() and 0xFF,
+            value = floatFromLeBytes(payload, indexPos + 2)
+        )
+    }
+
+    /**
+     * Extrai o bloco de floats de parametros do detalhe de preset 0x0304, na ordem da
+     * tabela tonex_params. Lista vazia se o marcador nao existir no payload.
+     */
+    fun parsePresetParameters(payload: ByteArray): List<Float> {
+        val start = indexOfSequence(payload, PARAM_BLOCK_MARKER) ?: return emptyList()
+        val values = ArrayList<Float>()
+        var offset = start + PARAM_BLOCK_MARKER.size
+        while (offset + 5 <= payload.size && (payload[offset].toInt() and 0xFF) == FLOAT_MARKER) {
+            values.add(floatFromLeBytes(payload, offset + 1))
+            offset += 5
+        }
+        return values
+    }
+
+    private fun floatToLeBytes(value: Float): ByteArray {
+        val bits = value.toRawBits()
+        return byteArrayOf(
+            bits.toByte(), (bits shr 8).toByte(), (bits shr 16).toByte(), (bits shr 24).toByte()
+        )
+    }
+
+    private fun floatFromLeBytes(payload: ByteArray, offset: Int): Float {
+        val bits = (payload[offset].toInt() and 0xFF) or
+            ((payload[offset + 1].toInt() and 0xFF) shl 8) or
+            ((payload[offset + 2].toInt() and 0xFF) shl 16) or
+            ((payload[offset + 3].toInt() and 0xFF) shl 24)
+        return Float.fromBits(bits)
+    }
+
+    private fun indexOfSequence(haystack: ByteArray, needle: ByteArray): Int? {
+        outer@ for (i in 0..haystack.size - needle.size) {
+            for (j in needle.indices) {
+                if (haystack[i + j] != needle[j]) continue@outer
+            }
+            return i
+        }
+        return null
     }
 
     /**
@@ -152,9 +264,17 @@ object TonexMessages {
      * Sufixo do header do COMANDO de troca de estado (apos o tipo `B9 03 81 06 03`),
      * substituindo o sufixo `80 A0 02` usado nas RESPOSTAS. Bytes exatos da captura real.
      */
-    private val SET_STATE_COMMAND_SUFFIX = byteArrayOf(
-        0x82.toByte(), 0xA0.toByte(), 0x00, 0x80.toByte(), 0x0B, 0x03
-    )
+    private fun setStateCommandSuffix(bodyLength: Int): ByteArray {
+        require(bodyLength in 0..0xFFFF) { "StateData grande demais: ${bodyLength}B" }
+        return byteArrayOf(
+            0x82.toByte(),
+            (bodyLength and 0xFF).toByte(),
+            ((bodyLength shr 8) and 0xFF).toByte(),
+            0x80.toByte(),
+            0x0B,
+            0x03
+        )
+    }
 
     /**
      * Regrava o estado completo mudando somente o byte do slot ativo, e troca o header
@@ -163,20 +283,96 @@ object TonexMessages {
      */
     // Offsets contados do FIM do StateData (= body sem o header de 8B), confirmados via
     // firmware ESP32 de referencia: usb_tonex_one.c (set_preset_in_slot / set_active_slot).
+    private const val STOMP_MODE_BODY_OFFSET = 19 // StateData[19]: 0=A/B, 1=Stomp
+    private const val CAB_SIM_BYPASS_BODY_OFFSET = 20 // StateData[20]: 0=IR/Cab on, 1=bypass
     private const val DIRECT_MONITOR_END_OFFSET = 7   // StateData[len-7]: 0=mute, 1=on
     private const val BYPASS_MODE_END_OFFSET    = 12  // StateData[len-12]: 0=active, 1=bypass
+    private const val CURRENT_SLOT_END_OFFSET   = 11
+    private const val SLOT_C_PRESET_END_OFFSET  = 14
+    private const val SLOT_B_PRESET_END_OFFSET  = 16
+    private const val SLOT_A_PRESET_END_OFFSET  = 18
 
-    fun buildSlotChangePayload(rawState: ByteArray, activeSlotOffset: Int, newSlotValue: Int): ByteArray {
-        require(activeSlotOffset in rawState.indices) { "offset de slot fora do estado" }
-        require(rawState.size > STATE_RESPONSE_HEADER_LENGTH) { "rawState curto demais para conter o header de resposta" }
+    /**
+     * Aplica [mutateBody] ao corpo do StateData (apos o header de resposta de 8B), fixa o campo
+     * "direct monitor ON" (comum a todo comando de escrita de estado) e remonta o comando
+     * completo com o header/sufixo de COMANDO (ver [setStateCommandSuffix]).
+     */
+    private fun rebuildStateCommand(rawState: ByteArray, mutateBody: (ByteArray) -> Unit): ByteArray {
         val typeHeader = rawState.copyOfRange(0, 5)
         val body = rawState.copyOfRange(STATE_RESPONSE_HEADER_LENGTH, rawState.size)
-        body[activeSlotOffset - STATE_RESPONSE_HEADER_LENGTH] = newSlotValue.toByte()
+        mutateBody(body)
         // direct monitor ON: sem isso o pedal muta o audio quando conectado via USB
         if (body.size > DIRECT_MONITOR_END_OFFSET) body[body.size - DIRECT_MONITOR_END_OFFSET] = 1
-        // bypass OFF: se bypass=1 for enviado os 3 botoes piscam indefinidamente
-        if (body.size > BYPASS_MODE_END_OFFSET) body[body.size - BYPASS_MODE_END_OFFSET] = 0
-        return typeHeader + SET_STATE_COMMAND_SUFFIX + body
+        return typeHeader + setStateCommandSuffix(body.size) + body
+    }
+
+    fun buildSlotChangePayload(rawState: ByteArray, activeSlotOffset: Int, newSlotValue: Int, bypass: Boolean = false): ByteArray {
+        require(activeSlotOffset in rawState.indices) { "offset de slot fora do estado" }
+        require(rawState.size > STATE_RESPONSE_HEADER_LENGTH) { "rawState curto demais para conter o header de resposta" }
+        return rebuildStateCommand(rawState) { body ->
+            body[activeSlotOffset - STATE_RESPONSE_HEADER_LENGTH] = newSlotValue.toByte()
+            if (body.size > BYPASS_MODE_END_OFFSET) body[body.size - BYPASS_MODE_END_OFFSET] = if (bypass) 1 else 0
+        }
+    }
+
+    /**
+     * Monta o payload para ligar/desligar o bypass do pedal, sem alterar slot ativo.
+     * [bypass] = true → bypass ON (sinal passa sem processamento).
+     * [bypass] = false → bypass OFF (processamento normal).
+     */
+    fun buildSetBypassPayload(rawState: ByteArray, fieldsOffset: Int, bypass: Boolean): ByteArray {
+        val slotOff = activeSlotOffset(rawState, fieldsOffset)
+        val currentSlotByte = rawState[slotOff].toInt() and 0xFF
+        return buildSlotChangePayload(rawState, slotOff, currentSlotByte, bypass)
+    }
+
+    /** Monta o payload para alternar o modo global do ToneX One: A/B (0) ou Stomp (1). */
+    fun buildSwitchModePayload(rawState: ByteArray, targetMode: PedalMode): ByteArray {
+        require(rawState.size > STATE_RESPONSE_HEADER_LENGTH + STOMP_MODE_BODY_OFFSET) {
+            "rawState curto demais para conter stomp_mode"
+        }
+        return rebuildStateCommand(rawState) { body ->
+            body[STOMP_MODE_BODY_OFFSET] = if (targetMode == PedalMode.STOMP) 1 else 0
+        }
+    }
+
+    /** Monta o payload para ligar/desligar o bypass do Cab Sim / IR. */
+    fun buildSetCabSimBypassPayload(rawState: ByteArray, bypass: Boolean): ByteArray {
+        require(rawState.size > STATE_RESPONSE_HEADER_LENGTH + CAB_SIM_BYPASS_BODY_OFFSET) {
+            "rawState curto demais para conter cab_sim_bypass"
+        }
+        return rebuildStateCommand(rawState) { body ->
+            body[CAB_SIM_BYPASS_BODY_OFFSET] = if (bypass) 1 else 0
+        }
+    }
+
+    /**
+     * Carrega [presetId] em [slot] regravando o StateData do ToneX One. Espelha
+     * `usb_tonex_one_set_preset_in_slot` do controlador de referencia.
+     */
+    fun buildLoadPresetToSlotPayload(
+        rawState: ByteArray,
+        presetId: Int,
+        slot: Slot,
+        selectSlot: Boolean
+    ): ByteArray {
+        require(presetId in 0 until 20) { "presetId fora de 0..19: $presetId" }
+        require(rawState.size > STATE_RESPONSE_HEADER_LENGTH) { "rawState curto demais para conter StateData" }
+        return rebuildStateCommand(rawState) { body ->
+            body[STOMP_MODE_BODY_OFFSET] = if (slot == Slot.C) 1 else 0
+            if (body.size > BYPASS_MODE_END_OFFSET) body[body.size - BYPASS_MODE_END_OFFSET] = 0
+
+            val presetOffset = body.size - slotPresetEndOffset(slot)
+            require(presetOffset in body.indices) { "offset de preset fora do StateData" }
+            body[presetOffset] = presetId.toByte()
+            if (presetOffset + 1 in body.indices) body[presetOffset + 1] = 0
+
+            if (selectSlot) {
+                val activeSlotOffset = body.size - CURRENT_SLOT_END_OFFSET
+                require(activeSlotOffset in body.indices) { "offset de slot ativo fora do StateData" }
+                body[activeSlotOffset] = slotToByte(slot).toByte()
+            }
+        }
     }
 
     // --- StateResponse: offsets calibrados contra captura real do pedal
@@ -202,14 +398,25 @@ object TonexMessages {
                 color = color
             )
         }
+        val libraryPresets = walk.colors.take(20).mapIndexed { index, color ->
+            LibraryPreset(
+                index = index,
+                name = "Preset ${(index + 1).toString().padStart(2, '0')}",
+                color = color
+            )
+        }
         return PedalState(
             activeSlot = slotFromByte(walk.activeSlotByte),
             inputTrim = walk.inputTrim,
             a4Reference = walk.a4Reference,
             tempo = walk.tempoBpm.toInt(),
             slots = slots,
+            libraryPresets = libraryPresets,
             rawState = payload,
-            presetIds = walk.presetIds
+            presetIds = walk.presetIds,
+            pedalMode = if (walk.stompMode) PedalMode.STOMP else PedalMode.AB,
+            cabSimBypass = walk.cabSimBypass,
+            bypassMode = walk.bypassMode
         )
     }
 
@@ -257,13 +464,18 @@ object TonexMessages {
         val activeSlotOffset: Int,
         val a4Reference: Int,
         val tempoBpm: Float,
-        val presetIds: List<Int>
+        val presetIds: List<Int>,
+        val stompMode: Boolean,
+        val cabSimBypass: Boolean,
+        val bypassMode: Boolean = false
     )
 
     private fun walkFields(payload: ByteArray, fieldsOffset: Int): FieldsWalk {
         var offset = fieldsOffset
         val trim = TaggedValue.decodeFloat(payload, offset); offset = trim.nextOffset
-        offset += 3 // cabSimBypass + tuningMode + campo desconhecido (bytes crus, ainda nao usados na UI)
+        val stompMode = (payload[offset].toInt() and 0xFF) != 0
+        val cabSimBypass = (payload[offset + 1].toInt() and 0xFF) != 0
+        offset += 3 // stompMode + cabSimBypass + tuningMode (bytes crus; so stompMode e usado)
 
         if ((payload[offset].toInt() and 0xFF) != RGB_COLLECTION_TAG) {
             throw PedalStateParseException(
@@ -322,6 +534,13 @@ object TonexMessages {
 
         val tempo = TaggedValue.decodeFloat(payload, offset)
 
+        // bypass_mode: body[len-12], confirmado contra firmware ESP32 (usb_tonex_one.c).
+        // 0 = sinal ativo, 1 = bypass (sinal passa direto sem processamento).
+        val body = payload.copyOfRange(STATE_RESPONSE_HEADER_LENGTH, payload.size)
+        val bypassMode = if (body.size > BYPASS_MODE_END_OFFSET) {
+            (body[body.size - BYPASS_MODE_END_OFFSET].toInt() and 0xFF) != 0
+        } else false
+
         return FieldsWalk(
             inputTrim = trim.value,
             colors = colors,
@@ -329,7 +548,10 @@ object TonexMessages {
             activeSlotOffset = activeSlotOffset,
             a4Reference = a4.value,
             tempoBpm = tempo.value,
-            presetIds = presetIds
+            presetIds = presetIds,
+            stompMode = stompMode,
+            cabSimBypass = cabSimBypass,
+            bypassMode = bypassMode
         )
     }
 
@@ -355,19 +577,12 @@ object TonexMessages {
         Slot.C -> 2
     }
 
-    /** Detecta o modo do pedal com base no numero de slots retornados no estado. */
-    fun detectMode(state: PedalState): PedalMode =
-        if (state.slots.size >= 3) PedalMode.STOMP else PedalMode.AB
-
-    /**
-     * Offset absoluto do byte de modo no rawState.
-     * Calibrado comparando rawState em A/B (=0x00) vs Stomp (=0x01) — captura 2026-06-30.
-     */
-    const val MODE_BYTE_OFFSET = 27
-
-    /** Constroi o payload de troca de modo (AB <-> STOMP). */
-    fun buildSwitchModePayload(rawState: ByteArray, targetMode: PedalMode): ByteArray {
-        val modeValue = if (targetMode == PedalMode.STOMP) 1 else 0
-        return buildSlotChangePayload(rawState, MODE_BYTE_OFFSET, modeValue)
+    private fun slotPresetEndOffset(slot: Slot): Int = when (slot) {
+        Slot.A -> SLOT_A_PRESET_END_OFFSET
+        Slot.B -> SLOT_B_PRESET_END_OFFSET
+        Slot.C -> SLOT_C_PRESET_END_OFFSET
     }
+
+    /** Detecta o modo do pedal a partir do StateResponse parseado. */
+    fun detectMode(state: PedalState): PedalMode = state.pedalMode
 }

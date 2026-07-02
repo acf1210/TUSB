@@ -105,7 +105,26 @@ class EventCaptureRecorder(
                 payload["messageType"] = event.messageType.toHexType()
                 payload["eventKind"] = "preset_detail"
                 payload["payloadHex"] = event.payloadHex
-                payload["parsed"] = mapOf("presetName" to event.name)
+                payload["parsed"] = mapOf(
+                    "presetName" to event.name,
+                    "parameterCount" to event.parameters.size
+                )
+                payload["notes"] = null
+            }
+            is PedalRuntimeEvent.FrameReceived -> {
+                payload["source"] = "runtime"
+                payload["messageType"] = event.messageType.toHexType()
+                payload["eventKind"] = "frame"
+                payload["payloadHex"] = event.payloadHex
+                payload["parsed"] = emptyMap<String, Any?>()
+                payload["notes"] = null
+            }
+            is PedalRuntimeEvent.ParameterChanged -> {
+                payload["source"] = "runtime"
+                payload["messageType"] = event.messageType.toHexType()
+                payload["eventKind"] = "parameter_change"
+                payload["payloadHex"] = event.payloadHex
+                payload["parsed"] = mapOf("paramIndex" to event.paramIndex, "value" to event.value)
                 payload["notes"] = null
             }
             is PedalRuntimeEvent.TransportError -> {

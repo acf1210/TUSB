@@ -22,6 +22,7 @@ class UsbPedalConnection(
 ) : PedalConnection {
     private val events = MutableSharedFlow<PedalRuntimeEvent>(extraBufferCapacity = 64)
     private var lastPresetNameFromNotification: String? = null
+    private var lastPresetParamsFromNotification: List<Float>? = null
 
     override val runtimeEvents: Flow<PedalRuntimeEvent> = events.asSharedFlow()
 
@@ -35,61 +36,84 @@ class UsbPedalConnection(
         // Em vez de falhar e obrigar o usuario a tocar "Conectar" varias vezes, reenviamos o
         // Hello internamente, com timeout curto por tentativa, ate o pedal responder.
         // Ver docs/protocol-notes.md (Bug 3 - conexao lenta).
+        val response = retryWakeHelloSequence(
+            attempts = HANDSHAKE_ATTEMPTS,
+            attemptTimeoutMs = HANDSHAKE_ATTEMPT_TIMEOUT_MS,
+            retryDelayMs = HANDSHAKE_RETRY_DELAY_MS,
+            reopenPortOnFirstAttempt = false,
+            timeoutMessage = { attempt -> "Hello sem resposta (tentativa ${attempt + 1}/$HANDSHAKE_ATTEMPTS)" },
+            exhaustedMessage = "pedal nao respondeu ao Hello apos $HANDSHAKE_ATTEMPTS tentativas"
+        )
+        val firmware = TonexMessages.parseFirmware(response)
+        emitEvent(
+            PedalRuntimeEvent.HelloResponseReceived(
+                firmwareVersion = firmware.version,
+                messageType = TonexMessages.STATE_RESPONSE_TYPE,
+                payloadHex = response.toHex()
+            )
+        )
+        val state = decodeStateFromResponse(response)
+        android.util.Log.d("ToneXConn", "handshake rawState(${response.size}B)=${response.joinToString(" ") { "%02X".format(it) }}")
+        return Handshake(firmware = firmware, state = state)
+    }
+
+    override suspend fun requestState(): PedalState {
+        val response = retryWakeHelloSequence(
+            attempts = REQUEST_STATE_ATTEMPTS,
+            attemptTimeoutMs = REQUEST_STATE_ATTEMPT_TIMEOUT_MS,
+            retryDelayMs = REQUEST_STATE_RETRY_DELAY_MS,
+            reopenPortOnFirstAttempt = true,
+            timeoutMessage = { attempt -> "State sem resposta (tentativa ${attempt + 1}/$REQUEST_STATE_ATTEMPTS)" },
+            exhaustedMessage = "pedal nao respondeu ao StateRequest apos $REQUEST_STATE_ATTEMPTS tentativas"
+        )
+        return decodeStateFromResponse(response)
+    }
+
+    /**
+     * Envia wake+hello e retorna o payload de estado (0x0306), tentando ate [attempts] vezes.
+     * Compartilhado por [handshake] e [requestState], que so diferem em reabrir a porta ja na
+     * 1a tentativa ([reopenPortOnFirstAttempt]) e no que fazem com a resposta.
+     */
+    private suspend fun retryWakeHelloSequence(
+        attempts: Int,
+        attemptTimeoutMs: Long,
+        retryDelayMs: Long,
+        reopenPortOnFirstAttempt: Boolean,
+        timeoutMessage: (attempt: Int) -> String,
+        exhaustedMessage: String
+    ): ByteArray {
         val wake = TonexMessages.wakePayload()
         val hello = TonexMessages.helloPayload()
         var lastError: Exception? = null
-        repeat(HANDSHAKE_ATTEMPTS) { attempt ->
+        repeat(attempts) { attempt ->
             try {
                 // Fallback: se ainda assim falhar, reabrir a porta antes de tentar de novo.
-                if (attempt > 0) {
+                if (reopenPortOnFirstAttempt || attempt > 0) {
                     runCatching { transport.close() }
                     transport.open()
                 }
                 // 1. ACORDA o pedal com o comando de init do app oficial. Sem isto a serial do
                 //    pedal fica dormente e ignora o Hello (causa raiz da conexao lenta).
                 emitRequestEvent(requestKind = "wake", payload = wake)
-                roundTripExpecting(wake, TonexMessages.WAKE_RESPONSE_TYPE, HANDSHAKE_ATTEMPT_TIMEOUT_MS)
+                roundTripExpecting(wake, TonexMessages.WAKE_RESPONSE_TYPE, attemptTimeoutMs)
                 // 2. Ja acordado, o Hello responde com um UNICO frame de estado (0x0306) que ja
                 //    carrega firmware + estado - nao e preciso requestState() separado.
                 emitRequestEvent(requestKind = "hello", payload = hello)
-                val response = roundTripExpecting(
-                    hello, TonexMessages.STATE_RESPONSE_TYPE, HANDSHAKE_ATTEMPT_TIMEOUT_MS
-                )
-                val firmware = TonexMessages.parseFirmware(response)
-                emitEvent(
-                    PedalRuntimeEvent.HelloResponseReceived(
-                        firmwareVersion = firmware.version,
-                        messageType = TonexMessages.STATE_RESPONSE_TYPE,
-                        payloadHex = response.toHex()
-                    )
-                )
-                val state = decodeStateFromResponse(response)
-                android.util.Log.d("ToneXConn", "handshake rawState(${response.size}B)=${response.joinToString(" ") { "%02X".format(it) }}")
-                return Handshake(firmware = firmware, state = state)
+                return roundTripExpecting(hello, TonexMessages.STATE_RESPONSE_TYPE, attemptTimeoutMs)
             } catch (e: PedalTransportTimeoutException) {
                 lastError = e
-                emitEvent(
-                    PedalRuntimeEvent.TransportError(
-                        errorMessage = "Hello sem resposta (tentativa ${attempt + 1}/$HANDSHAKE_ATTEMPTS)"
-                    )
-                )
-                if (attempt < HANDSHAKE_ATTEMPTS - 1) delay(HANDSHAKE_RETRY_DELAY_MS)
+                emitEvent(PedalRuntimeEvent.TransportError(errorMessage = timeoutMessage(attempt)))
+                if (attempt < attempts - 1) delay(retryDelayMs)
+            } catch (e: PedalProtocolException) {
+                lastError = e
+                if (attempt < attempts - 1) delay(retryDelayMs)
             } catch (e: java.io.IOException) {
                 // Falha ao reabrir a porta: trata como tentativa perdida e tenta de novo.
                 lastError = e
-                if (attempt < HANDSHAKE_ATTEMPTS - 1) delay(HANDSHAKE_RETRY_DELAY_MS)
+                if (attempt < attempts - 1) delay(retryDelayMs)
             }
         }
-        throw PedalProtocolException(
-            "pedal nao respondeu ao Hello apos $HANDSHAKE_ATTEMPTS tentativas",
-            lastError
-        )
-    }
-    override suspend fun requestState(): PedalState {
-        val requestPayload = TonexMessages.requestStatePayload()
-        emitRequestEvent(requestKind = "request_state", payload = requestPayload)
-        val payload = roundTripExpecting(requestPayload, TonexMessages.STATE_RESPONSE_TYPE)
-        return decodeStateFromResponse(payload)
+        throw PedalProtocolException(exhaustedMessage, lastError)
     }
 
     /**
@@ -100,7 +124,8 @@ class UsbPedalConnection(
     private fun decodeStateFromResponse(payload: ByteArray): PedalState {
         return try {
             val parsed = TonexMessages.parseState(payload, fieldsOffset)
-            val enriched = lastPresetNameFromNotification?.let(parsed::withActivePresetName) ?: parsed
+            val named = lastPresetNameFromNotification?.let(parsed::withActivePresetName) ?: parsed
+            val enriched = lastPresetParamsFromNotification?.let(named::withActivePresetParameters) ?: named
             emitEvent(
                 PedalRuntimeEvent.StateReceived(
                     state = enriched,
@@ -137,30 +162,139 @@ class UsbPedalConnection(
 
     override suspend fun selectPreset(presetId: Int) {
         android.util.Log.d("ToneXConn", "selectPreset presetId=0x${presetId.toString(16)}")
-        for (payload in TonexMessages.selectPresetPayloads(presetId)) {
-            val frame = HdlcCodec.encode(payload)
-            android.util.Log.d("ToneXConn", "  -> frame(${frame.size}B)=${frame.joinToString(" ") { "%02X".format(it) }}")
-            emitRequestEvent(requestKind = "select_preset", payload = payload)
-            try {
-                transport.write(frame)
-                android.util.Log.d("ToneXConn", "  -> write OK")
-            } catch (e: Exception) {
-                android.util.Log.e("ToneXConn", "  -> write FAILED: ${e.message}", e)
-            }
-            delay(PRESET_COMMAND_STEP_DELAY_MS)
+        val payload = TonexMessages.rawPresetSelectPayload(presetId)
+        android.util.Log.d("ToneXConn", "  -> raw(${payload.size}B)=${payload.joinToString(" ") { "%02X".format(it) }}")
+        emitRequestEvent(requestKind = "select_preset_raw", payload = payload)
+        try {
+            transport.write(payload)
+            android.util.Log.d("ToneXConn", "  -> write OK")
+        } catch (e: Exception) {
+            android.util.Log.e("ToneXConn", "  -> write FAILED: ${e.message}", e)
         }
+    }
+
+    override suspend fun loadPresetToSlot(
+        currentState: PedalState,
+        presetId: Int,
+        slot: com.opentonex.controller.domain.Slot,
+        selectSlot: Boolean
+    ) {
+        val payload = TonexMessages.buildLoadPresetToSlotPayload(
+            rawState = currentState.rawState,
+            presetId = presetId,
+            slot = slot,
+            selectSlot = selectSlot
+        )
+        val frame = HdlcCodec.encode(payload)
+        android.util.Log.d(
+            "ToneXConn",
+            "loadPresetToSlot preset=$presetId slot=$slot select=$selectSlot frame(${frame.size}B)=" +
+                frame.take(12).joinToString(" ") { "%02X".format(it) } + "..."
+        )
+        emitRequestEvent(requestKind = "load_preset_to_slot", payload = payload)
+        transport.write(frame)
     }
 
     override suspend fun switchMode(currentState: PedalState, targetMode: PedalMode) {
         val payload = TonexMessages.buildSwitchModePayload(currentState.rawState, targetMode)
         val frame = HdlcCodec.encode(payload)
-        android.util.Log.d("ToneXConn", "switchMode target=$targetMode frame(${frame.size}B)=${frame.toHex()}")
+        android.util.Log.d("ToneXConn", "switchMode target=$targetMode frame(${frame.size}B)=${frame.take(12).joinToString(" ") { "%02X".format(it) }}...")
+        emitRequestEvent(requestKind = "switch_mode", payload = payload)
+        transport.write(frame)
+    }
+
+    suspend fun writeBypass(state: PedalState, bypass: Boolean) {
+        val payload = TonexMessages.buildSetBypassPayload(state.rawState, fieldsOffset, bypass)
+        val frame = HdlcCodec.encode(payload)
+        android.util.Log.d("ToneXConn", "writeBypass bypass=$bypass frame(${frame.size}B)=${frame.take(12).joinToString(" ") { "%02X".format(it) }}...")
+        emitRequestEvent(requestKind = "write_bypass", payload = payload)
+        try {
+            transport.write(frame)
+        } catch (e: Exception) {
+            android.util.Log.e("ToneXConn", "writeBypass FAILED: ${e.message}", e)
+        }
+    }
+
+    suspend fun writeCabSimBypass(state: PedalState, bypass: Boolean) {
+        val payload = TonexMessages.buildSetCabSimBypassPayload(state.rawState, bypass)
+        val frame = HdlcCodec.encode(payload)
+        android.util.Log.d("ToneXConn", "writeCabSimBypass bypass=$bypass frame(${frame.size}B)=${frame.take(12).joinToString(" ") { "%02X".format(it) }}...")
+        emitRequestEvent(requestKind = "write_cab_sim_bypass", payload = payload)
+        transport.write(frame)
+    }
+
+    override suspend fun writeParameter(paramIndex: Int, value: Float) {
+        val payload = TonexMessages.buildSetParameterPayload(paramIndex, value)
+        val frame = HdlcCodec.encode(payload)
+        android.util.Log.d("ToneXConn", "writeParameter index=$paramIndex value=$value frame(${frame.size}B)")
+        emitRequestEvent(requestKind = "write_parameter", payload = payload)
         transport.write(frame)
     }
 
     override suspend fun disconnect() {
         transport.close()
         emitEvent(PedalRuntimeEvent.Disconnected)
+    }
+
+    /** Resultado de uma leitura passiva: estado completo ou notificacao (0x0304/0x0309/etc). */
+    private sealed interface PassiveFrame {
+        data class State(val state: PedalState) : PassiveFrame
+        data object Notification : PassiveFrame
+    }
+
+    private suspend fun readPassiveFrame(timeoutMs: Long): PassiveFrame? {
+        val decoded = try {
+            decodeFrame(transport.readFrame(timeoutMs))
+        } catch (e: PedalTransportTimeoutException) {
+            return null
+        }
+        val messageType = TonexMessages.messageType(decoded)
+        android.util.Log.d("ToneXConn", "passiveFrame type=0x${messageType.toString(16)} (${decoded.size}B)")
+        emitEvent(
+            PedalRuntimeEvent.FrameReceived(
+                messageType = messageType,
+                payloadHex = decoded.toHex()
+            )
+        )
+        return when (messageType) {
+            TonexMessages.STATE_RESPONSE_TYPE -> PassiveFrame.State(decodeStateFromResponse(decoded))
+            TonexMessages.PRESET_DETAIL_TYPE -> {
+                emitPresetDetail(decoded)
+                PassiveFrame.Notification
+            }
+            TonexMessages.PARAM_CHANGE_TYPE -> {
+                emitParameterChange(decoded)
+                PassiveFrame.Notification
+            }
+            else -> PassiveFrame.Notification
+        }
+    }
+
+    suspend fun readPassiveState(timeoutMs: Long = PASSIVE_READ_TIMEOUT_MS): PedalState? =
+        (readPassiveFrame(timeoutMs) as? PassiveFrame.State)?.state
+
+    /**
+     * Drena TODOS os frames pendentes na serial (ate [maxFrames]), nao apenas um. Essencial
+     * durante rajadas: o knob fisico girando emite dezenas de 0x0309 entre dois polls; ler
+     * um unico frame por poll deixava as notificacoes envelhecerem no buffer. Retorna o
+     * ultimo StateResponse visto (ou null); as notificacoes viram eventos de runtime.
+     */
+    suspend fun drainPassiveFrames(maxFrames: Int = PASSIVE_DRAIN_MAX_FRAMES): PedalState? {
+        var lastState: PedalState? = null
+        var timeout = PASSIVE_READ_TIMEOUT_MS
+        repeat(maxFrames) {
+            val frame = try {
+                readPassiveFrame(timeout)
+            } catch (e: PedalProtocolException) {
+                // Frame corrompido no meio da rajada: descarta e segue drenando.
+                android.util.Log.w("ToneXConn", "drain: frame invalido descartado (${e.message})")
+                PassiveFrame.Notification
+            } ?: return lastState
+            if (frame is PassiveFrame.State) lastState = frame.state
+            // Apos o 1o frame, os demais ja estao no buffer: timeout curto.
+            timeout = PASSIVE_DRAIN_NEXT_TIMEOUT_MS
+        }
+        return lastState
     }
 
     /**
@@ -190,19 +324,42 @@ class UsbPedalConnection(
             val decoded = decodeFrame(transport.readFrame(remaining))
             when (TonexMessages.messageType(decoded)) {
                 expectedType -> return decoded
-                TonexMessages.PRESET_DETAIL_TYPE -> {
-                    lastPresetNameFromNotification = TonexMessages.parsePresetNameFromDetail(decoded)
-                    lastPresetNameFromNotification?.let { presetName ->
-                        emitEvent(
-                            PedalRuntimeEvent.PresetDetailReceived(
-                                name = presetName,
-                                messageType = TonexMessages.PRESET_DETAIL_TYPE,
-                                payloadHex = decoded.toHex()
-                            )
-                        )
-                    }
-                }
+                TonexMessages.PRESET_DETAIL_TYPE -> emitPresetDetail(decoded)
+                TonexMessages.PARAM_CHANGE_TYPE -> emitParameterChange(decoded)
             }
+        }
+    }
+
+    /** Decodifica uma notificacao 0x0309 (knob fisico) e a publica como evento de runtime. */
+    private fun emitParameterChange(payload: ByteArray) {
+        val change = TonexMessages.parseParameterChange(payload) ?: run {
+            android.util.Log.w("ToneXConn", "paramChange nao parseado: ${payload.toHex()}")
+            return
+        }
+        android.util.Log.d("ToneXConn", "paramChange index=${change.index} value=${change.value}")
+        emitEvent(
+            PedalRuntimeEvent.ParameterChanged(
+                paramIndex = change.index,
+                value = change.value,
+                messageType = TonexMessages.PARAM_CHANGE_TYPE,
+                payloadHex = payload.toHex()
+            )
+        )
+    }
+
+    private fun emitPresetDetail(payload: ByteArray) {
+        lastPresetNameFromNotification = TonexMessages.parsePresetNameFromDetail(payload)
+        val parameters = TonexMessages.parsePresetParameters(payload)
+        if (parameters.isNotEmpty()) lastPresetParamsFromNotification = parameters
+        lastPresetNameFromNotification?.let { presetName ->
+            emitEvent(
+                PedalRuntimeEvent.PresetDetailReceived(
+                    name = presetName,
+                    messageType = TonexMessages.PRESET_DETAIL_TYPE,
+                    payloadHex = payload.toHex(),
+                    parameters = parameters
+                )
+            )
         }
     }
 
@@ -267,5 +424,11 @@ class UsbPedalConnection(
         /** Timeout curto por tentativa de Hello: o pedal responde em ~24ms quando pega. */
         const val HANDSHAKE_ATTEMPT_TIMEOUT_MS = 400L
         private const val HANDSHAKE_RETRY_DELAY_MS = 60L
+        private const val REQUEST_STATE_ATTEMPTS = 30
+        private const val REQUEST_STATE_ATTEMPT_TIMEOUT_MS = 400L
+        private const val REQUEST_STATE_RETRY_DELAY_MS = 60L
+        private const val PASSIVE_READ_TIMEOUT_MS = 250L
+        private const val PASSIVE_DRAIN_MAX_FRAMES = 64
+        private const val PASSIVE_DRAIN_NEXT_TIMEOUT_MS = 60L
     }
 }

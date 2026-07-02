@@ -3,7 +3,9 @@
     <uses-feature android:name="android.hardware.usb.host" android:required="true" />
 
     <application
-        android:label="ToneX Controller"
+        android:icon="@mipmap/ic_launcher"
+        android:label="TUSB"
+        android:roundIcon="@mipmap/ic_launcher"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <activity
             android:name=".MainActivity"

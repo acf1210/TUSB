@@ -168,6 +168,109 @@ Tentativas anteriores de USBPcap falharam (5+ vezes). Diagnostico:
 - **Nao elevado:** `Couldn't open device - 5` (acesso negado).
 - Conclusao: nao adianta repetir o USBPcap CLI neste setup.
 
+## Validacao cruzada com referencia externa (vit3k/tonex_controller, 2026-07-02)
+
+Comparado byte a byte com o firmware ESP32 open-source
+[`vit3k/tonex_controller`](https://github.com/vit3k/tonex_controller) (`protocol.md`,
+`main/tonex.cpp`, `main/hdlc.cpp`, `main/usb.cpp`), que fala com o MESMO ToneX One
+(VID `0x1963`/PID `0x00d1`) como host USB dedicado. Serve como segunda fonte independente
+para os offsets e o framing ja capturados neste projeto.
+
+**Confirmado identico (forte validacao):**
+- Framing HDLC: flag `0x7E`, escape `0x7D` XOR `0x20`, CRC-16 poli reverso `0x8408`,
+  init `0xFFFF`, inversao final — bate exatamente com `HdlcCodec.kt`/`Crc16Ccitt.kt`.
+- Envelope do comando de escrita de estado (`B9 03 81 06 03 82 <size LE> 80 0B 03` +
+  corpo) e os offsets a partir do FIM do corpo — slot ativo=11, presetC=14, presetB=16,
+  presetA=18 — batem exatamente com `Tonex::setSlot`/`Tonex::changePreset`/
+  `Tonex::parseState` da referencia. Confirma que `STATE_RESPONSE_HEADER_LENGTH=8` e os
+  offsets em `TonexMessages.kt` estao corretos, independente da nossa propria captura.
+- `TonexMessages.wakePayload()` (`B9 03 00 82 04 00 80 0B 01 B9 02 02 0B`) e byte-a-byte
+  identico ao `Tonex::hello()` da referencia — confirma que o "wake" descoberto na Fase
+  3 (Bug 3 acima) e o Hello real do protocolo.
+
+**Divergencias observadas (NAO aplicadas ao codigo — exigem hardware fisico para testar
+sem risco de regressao na conexao ja validada):**
+- `TonexMessages.helloPayload()` (5B, `B9 03 81 03 00`) nao corresponde ao
+  `Tonex::requestState()` da referencia (15B,
+  `B9 03 00 82 06 00 80 0B 03 B9 02 81 06 03 0B`); e o tipo de resposta que esperamos
+  apos o wake (`WAKE_RESPONSE_TYPE=0x0B2B`) tambem nao bate com o ack de Hello da
+  referencia (tipo `0x02`). Hipotese: a referencia tem `// TODO: update to 1.2.*` em
+  `changePreset`, sugerindo que ela mira um firmware mais antigo que o capturado aqui.
+- Baud rate: `UsbSerialTransport.BAUD_RATE=115200` vs `9600` na referencia. Como CDC-ACM
+  e um link serial virtual, o pedal provavelmente ignora o valor pedido — nao testado.
+  **RESOLVIDO em 2026-07-02 pela validacao com Builty (abaixo): 115200 esta correto.**
+
+## Validacao cruzada com segunda referencia (Builty/TonexOneController, 2026-07-02)
+
+Comparado com [`Builty/TonexOneController`](https://github.com/Builty/TonexOneController)
+(`source/main/usb_tonex_one.c`, `source/main/tonex_params.c`), firmware ESP32 open-source
+ATIVAMENTE MANTIDO que suporta o ToneX One com firmware atual (1.2.x+). Terceira fonte
+independente (nossa captura + vit3k + Builty).
+
+**Confirmado identico (resolve divergencias da secao anterior):**
+- Hello: `B9 03 00 82 04 00 80 0B 01 B9 02 02 0B` — byte a byte igual ao nosso
+  `wakePayload()` E ao `Tonex::hello()` do vit3k. Tres fontes concordam.
+- RequestState (15B): `B9 03 00 82 06 00 80 0B 03 B9 02 81 06 03 0B` — identico ao
+  `Tonex::requestState()` do vit3k. Com DUAS fontes independentes concordando (e o Builty
+  mirando firmware atual), esta e a forma canonica do protocolo. Nosso `helloPayload()`
+  de 5B continua em uso por estar validado no hardware fisico; a forma canonica foi
+  codificada em `TonexMessages.requestStatePayload()` (com teste de unidade travando os
+  bytes) para teste A/B futuro no pedal.
+- Line coding CDC: `dwDTERate=115200, 8N1` — igual ao nosso `BAUD_RATE=115200`. O `9600`
+  do vit3k e o outlier; divergencia de baud rate RESOLVIDA a nosso favor.
+- Offsets do fim do StateData: slot ativo=11, presetC=14, presetB=16, presetA=18
+  (`TONEX_STATE_OFFSET_END_*`) — batem com `CURRENT_SLOT_END_OFFSET` etc. em
+  `TonexMessages.kt`.
+- Troca de slot/preset: reescrita COMPLETA do StateData reenviado com header de comando
+  (`memcpy` do buffer de estado + framing) — valida a nossa abordagem `writeState`/
+  `rebuildStateCommand`.
+
+**Material adicional (roadmap do editor):**
+- `tonex_params.c` define a tabela completa de 106 parametros (85 de preset: noise gate,
+  compressor, EQ, amp, cab/VIR, reverb, modulacao, delay + globais BPM/master volume),
+  com nome, min/max e tipo (SWITCH/RANGE/SELECT) de cada um. Util como referencia de
+  ranges para a UI do editor; o mapeamento byte a byte no StateData nao esta documentado
+  la e ainda depende de captura propria (frames `0x0309`).
+
+## Protocolo de parametros 0x0309 — decodificado e implementado (2026-07-02)
+
+O layout do Builty (`usb_tonex_one_send_single_parameter` /
+`usb_tonex_one_parse_preset_parameters`) foi validado contra a NOSSA captura real de
+knob fisico (`captures/tonex-session-1782930773375.jsonl`) e bateu byte a byte:
+
+```
+frame capturado (knob de volume girando):
+B9 03 81 09 03 | 0A 02 | B9 04 02 00 | 15 | 88 | 33 33 03 41
+  tipo 0x0309    envel.   prefixo      idx  f32   8.2 (LE)
+```
+
+- Indice `0x15` = 21 = `TONEX_PARAM_MODEL_VOLUME` na tabela `tonex_params`; os floats da
+  captura (8.2 -> 4.4, decrescendo) batem com o range 0..10 do volume. Isso RESOLVE o
+  "mapear bytes de knob" que estava em aberto: o pedal identifica o parametro por INDICE
+  na tabela, nao por offset no StateData.
+- **Notificacao (pedal -> host)**: tipo `0x0309`, payload `B9 04 02 00 <idx> 88 <f32 LE>`.
+  Implementado em `TonexMessages.parseParameterChange` + evento
+  `PedalRuntimeEvent.ParameterChanged`; a UI reflete o knob fisico no knob virtual.
+- **Escrita (host -> pedal)**: header `B9 03 81 09 03 82 0A 00 80 0B 03` + o MESMO payload.
+  Nao reenvia o preset inteiro. Implementado em `TonexMessages.buildSetParameterPayload`
+  + `UsbPedalConnection.writeParameter`; os knobs virtuais (Gain/Bass/Mid/Treble/Volume,
+  indices 20/11/13/16/21) escrevem no pedal com debounce de 60ms.
+  **VALIDADO EM BANCADA (2026-07-02)**: com o pedal fisico via USB no Android, o knob
+  fisico move o knob virtual e o knob virtual altera o pedal, nos dois sentidos.
+- **Licao da bancada (recepcao de rajadas)**: o giro do knob emite dezenas de 0x0309 que
+  chegam AGRUPADOS num mesmo chunk USB. O `readFrame` original descartava os bytes apos
+  o 1o frame do chunk, e o poll de 900ms lia so 1 frame por vez — a UI nao reagia.
+  Correcao: buffer de sobras entre chamadas no `UsbSerialTransport.readFrame` +
+  `UsbPedalConnection.drainPassiveFrames` (ate 64 frames por poll, timeout de 60ms apos
+  o 1o frame), usado pelo `PedalRepository.syncStateFromPedal`.
+- **Bloco de parametros no detalhe de preset `0x0304`**: comeca no marcador
+  `BA 03 BA 6D`, seguido de floats `88 <4B LE>` na ordem da tabela `tonex_params`.
+  Implementado em `TonexMessages.parsePresetParameters` e ligado a UI: quando o detalhe
+  do preset chega, os floats sao aplicados ao preset ativo
+  (`PedalState.withActivePresetParameters`) e os knobs virtuais carregam os valores
+  REAIS do preset (via `AmpKnobUiState.withPedalParameters`), como no app oficial.
+- Indices e ranges dos knobs mapeados em `domain/TonexParam.kt`.
+
 ## Proximos passos sugeridos (Bug 2)
 
 1. **[Maior chance] Plugar o pedal via porta/HUB USB 2.0** (forcar enumeracao Full Speed,

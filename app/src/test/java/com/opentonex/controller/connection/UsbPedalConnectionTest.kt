@@ -5,6 +5,7 @@ import com.opentonex.controller.protocol.HdlcCodec
 import com.opentonex.controller.protocol.HdlcFrame
 import com.opentonex.controller.protocol.TaggedValue
 import com.opentonex.controller.protocol.TonexMessages
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -120,13 +121,16 @@ class UsbPedalConnectionTest {
 
     @Test fun `requestState decodes pedal state from the response frame`() = runTest {
         val transport = FakePedalTransport()
+        transport.pendingFrames.add(wakeResponseFrame())
         transport.nextFrame = HdlcCodec.encode(syntheticStatePayload(activeSlotByte = 1))
         val connection = UsbPedalConnection(transport)
 
         val state = connection.requestState()
 
         assertEquals(Slot.B, state.activeSlot)
-        assertArrayEquals(HdlcCodec.encode(TonexMessages.requestStatePayload()), transport.written.single())
+        assertEquals(2, transport.written.size)
+        assertArrayEquals(HdlcCodec.encode(TonexMessages.wakePayload()), transport.written[0])
+        assertArrayEquals(HdlcCodec.encode(TonexMessages.helloPayload()), transport.written[1])
     }
 
     @Test fun `writeState sends the rewritten state with the new active slot byte`() = runTest {
@@ -147,6 +151,7 @@ class UsbPedalConnectionTest {
     @Test fun `requestState ignores async notifications and waits for the StateResponse type`() = runTest {
         val transport = FakePedalTransport()
         val noisePayload = byteArrayOf(0xB9.toByte(), 0x03, 0x81.toByte(), 0x09, 0x03, 0x0A, 0x02)
+        transport.pendingFrames.add(wakeResponseFrame())
         transport.pendingFrames.add(HdlcCodec.encode(noisePayload))
         transport.nextFrame = HdlcCodec.encode(syntheticStatePayload(activeSlotByte = 1))
         val connection = UsbPedalConnection(transport)
@@ -164,6 +169,7 @@ class UsbPedalConnectionTest {
             0x00, 0x00,
             0xBC.toByte(), presetName.length.toByte()
         ) + presetName.toByteArray(Charsets.US_ASCII)
+        transport.pendingFrames.add(wakeResponseFrame())
         transport.pendingFrames.add(HdlcCodec.encode(detailPayload))
         transport.nextFrame = HdlcCodec.encode(syntheticStatePayload(activeSlotByte = 1))
         val connection = UsbPedalConnection(transport)
@@ -171,6 +177,17 @@ class UsbPedalConnectionTest {
         val state = connection.requestState()
 
         assertEquals(presetName, state.slots[Slot.B.ordinal].name)
+    }
+
+    @Test fun `readPassiveState decodes an unsolicited state frame without writing`() = runTest {
+        val transport = FakePedalTransport()
+        transport.nextFrame = HdlcCodec.encode(syntheticStatePayload(activeSlotByte = 1))
+        val connection = UsbPedalConnection(transport)
+
+        val state = connection.readPassiveState()
+
+        assertEquals(Slot.B, state?.activeSlot)
+        assertTrue(transport.written.isEmpty())
     }
 
     @Test fun `selectPreset envia 6 bytes raw no CDC serial sem framing HDLC`() = runTest {
@@ -184,6 +201,77 @@ class UsbPedalConnectionTest {
             byteArrayOf(0xF0.toByte(), 0x0D.toByte(), 0xF7.toByte(), 0x05, 0x00, 0x01),
             transport.written[0]
         )
+    }
+
+    @Test fun `requestState applies preset parameters learned from async 0304 notification`() = runTest {
+        val transport = FakePedalTransport()
+        val presetName = "Fat US Clean"
+        // Bloco de parametros: 22 floats 88 <LE> apos o marcador BA 03 BA 6D; indice 20
+        // (MODEL_GAIN) = 5.0f, indice 21 (MODEL_VOLUME) = 8.2f.
+        var paramBlock = byteArrayOf(0xBA.toByte(), 0x03, 0xBA.toByte(), 0x6D)
+        repeat(22) { index ->
+            val value = when (index) {
+                20 -> 5.0f
+                21 -> 8.2f
+                else -> 0f
+            }
+            val bits = value.toRawBits()
+            paramBlock += byteArrayOf(
+                0x88.toByte(), bits.toByte(), (bits shr 8).toByte(),
+                (bits shr 16).toByte(), (bits shr 24).toByte()
+            )
+        }
+        val detailPayload = byteArrayOf(
+            0xB9.toByte(), 0x03, 0x81.toByte(), 0x04, 0x03, 0x00, 0x00,
+            0xBC.toByte(), presetName.length.toByte()
+        ) + presetName.toByteArray(Charsets.US_ASCII) + paramBlock
+        transport.pendingFrames.add(wakeResponseFrame())
+        transport.pendingFrames.add(HdlcCodec.encode(detailPayload))
+        transport.nextFrame = HdlcCodec.encode(syntheticStatePayload(activeSlotByte = 1))
+        val connection = UsbPedalConnection(transport)
+
+        val state = connection.requestState()
+
+        val gain = state.slots[Slot.B.ordinal].parameters["ParameterXModelGain"]
+        assertEquals(5.0f, gain?.value ?: Float.NaN, 0.0001f)
+        val volume = state.slots[Slot.B.ordinal].parameters["ParameterXModelVolume"]
+        assertEquals(8.2f, volume?.value ?: Float.NaN, 0.0001f)
+    }
+
+    @Test fun `writeParameter sends the framed single-parameter command`() = runTest {
+        val transport = FakePedalTransport()
+        val connection = UsbPedalConnection(transport)
+
+        connection.writeParameter(paramIndex = 20, value = 5.0f)
+
+        val expected = TonexMessages.buildSetParameterPayload(index = 20, value = 5.0f)
+        assertArrayEquals(HdlcCodec.encode(expected), transport.written.single())
+    }
+
+    @Test fun `readPassiveState decodes a physical knob notification without state change`() = runTest {
+        val transport = FakePedalTransport()
+        // Frame real de knob fisico (volume=8.2) capturado do pedal.
+        transport.nextFrame = HdlcCodec.encode(
+            byteArrayOf(
+                0xB9.toByte(), 0x03, 0x81.toByte(), 0x09, 0x03, 0x0A, 0x02,
+                0xB9.toByte(), 0x04, 0x02, 0x00, 0x15, 0x88.toByte(), 0x33, 0x33, 0x03, 0x41
+            )
+        )
+        val connection = UsbPedalConnection(transport)
+        val events = mutableListOf<PedalRuntimeEvent>()
+        val collector = launch {
+            connection.runtimeEvents.collect { events.add(it) }
+        }
+        kotlinx.coroutines.yield() // garante a inscricao antes da emissao (SharedFlow sem replay)
+
+        val state = connection.readPassiveState()
+        kotlinx.coroutines.yield()
+        collector.cancel()
+
+        assertEquals(null, state)
+        val change = events.filterIsInstance<PedalRuntimeEvent.ParameterChanged>().single()
+        assertEquals(21, change.paramIndex)
+        assertEquals(8.2f, change.value, 0.0001f)
     }
 
     @Test fun `disconnect closes the transport`() = runTest {

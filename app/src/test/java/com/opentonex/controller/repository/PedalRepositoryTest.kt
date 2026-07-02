@@ -7,6 +7,7 @@ import com.opentonex.controller.connection.PedalConnection
 import com.opentonex.controller.connection.PedalRuntimeEvent
 import java.nio.file.Files
 import com.opentonex.controller.domain.FirmwareInfo
+import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.PresetSlot
 import com.opentonex.controller.domain.Rgb
@@ -42,6 +43,19 @@ private class RecordingPedalConnection : PedalConnection {
         lastSelectedPresetId = presetId
         delegate.selectPreset(presetId)
     }
+
+    override suspend fun loadPresetToSlot(currentState: PedalState, presetId: Int, slot: Slot, selectSlot: Boolean) =
+        delegate.loadPresetToSlot(currentState, presetId, slot, selectSlot)
+
+    override suspend fun switchMode(currentState: PedalState, targetMode: PedalMode) =
+        delegate.switchMode(currentState, targetMode)
+
+    override suspend fun writeParameter(paramIndex: Int, value: Float) {
+        writtenParameters[paramIndex] = value
+        delegate.writeParameter(paramIndex, value)
+    }
+
+    val writtenParameters = mutableMapOf<Int, Float>()
 
     override suspend fun disconnect() = delegate.disconnect()
 }
@@ -79,6 +93,12 @@ private class DriftingPresetMapConnection : PedalConnection {
     }
 
     override suspend fun selectPreset(presetId: Int) = Unit
+
+    override suspend fun loadPresetToSlot(currentState: PedalState, presetId: Int, slot: Slot, selectSlot: Boolean) = Unit
+
+    override suspend fun switchMode(currentState: PedalState, targetMode: PedalMode) = Unit
+
+    override suspend fun writeParameter(paramIndex: Int, value: Float) = Unit
 
     override suspend fun disconnect() = Unit
 
@@ -127,16 +147,15 @@ class PedalRepositoryTest {
         repo.disconnect()
     }
 
-    @Test fun `selectSlot envia selectPreset com o presetId do slot`() = runTest {
+    @Test fun `selectSlot envia writeState com o slot ativo atualizado`() = runTest {
         val connection = RecordingPedalConnection()
         val repo = PedalRepository(connection, this)
 
         repo.connect()
         repo.selectSlot(Slot.C)
 
-        assertEquals(0, connection.writeStateCalls)
-        // FakePedalConnection.presetIds = [0x0C, 0x08, 0x07] -> slot C = indice 2 = 0x07
-        assertEquals(0x07, connection.lastSelectedPresetId)
+        assertEquals(1, connection.writeStateCalls)
+        assertEquals(null, connection.lastSelectedPresetId)
         repo.disconnect()
     }
 

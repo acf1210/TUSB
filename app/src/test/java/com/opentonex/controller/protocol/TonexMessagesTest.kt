@@ -1,19 +1,78 @@
 package com.opentonex.controller.protocol
 
 import com.opentonex.controller.domain.Rgb
+import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.Slot
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class TonexMessagesTest {
-    @Test fun `requestState payload starts with documented header`() {
-        val payload = TonexMessages.requestStatePayload()
-        assertArrayEquals(byteArrayOf(0x81.toByte(), 0x06, 0x03), payload.copyOfRange(0, 3))
-    }
-
     @Test fun `hello payload is non-empty`() {
         org.junit.Assert.assertTrue(TonexMessages.helloPayload().isNotEmpty())
+    }
+
+    // 8.2f em IEEE 754 LE = 33 33 03 41; indice 0x15=21=MODEL_VOLUME. Bytes do header e do
+    // payload conforme Builty/usb_tonex_one_send_single_parameter.
+    @Test fun `build set parameter payload matches reference single-parameter command`() {
+        assertArrayEquals(
+            byteArrayOf(
+                0xB9.toByte(), 0x03, 0x81.toByte(), 0x09, 0x03,
+                0x82.toByte(), 0x0A, 0x00, 0x80.toByte(), 0x0B, 0x03,
+                0xB9.toByte(), 0x04, 0x02, 0x00, 0x15, 0x88.toByte(),
+                0x33, 0x33, 0x03, 0x41
+            ),
+            TonexMessages.buildSetParameterPayload(index = 21, value = 8.2f)
+        )
+    }
+
+    // Frame REAL capturado do pedal (tonex-session-1782930773375.jsonl) girando o knob
+    // fisico de volume: indice 0x15=21, valor 8.2.
+    @Test fun `parse parameter change decodes captured physical knob frame`() {
+        val captured = byteArrayOf(
+            0xB9.toByte(), 0x03, 0x81.toByte(), 0x09, 0x03, 0x0A, 0x02,
+            0xB9.toByte(), 0x04, 0x02, 0x00, 0x15, 0x88.toByte(),
+            0x33, 0x33, 0x03, 0x41
+        )
+        val change = TonexMessages.parseParameterChange(captured)
+        assertEquals(21, change?.index)
+        assertEquals(8.2f, change?.value ?: Float.NaN, 0.0001f)
+    }
+
+    @Test fun `parse parameter change returns null for other message types`() {
+        val stateFrame = byteArrayOf(0xB9.toByte(), 0x03, 0x81.toByte(), 0x06, 0x03, 0x00)
+        assertEquals(null, TonexMessages.parseParameterChange(stateFrame))
+    }
+
+    // Bloco de parametros do detalhe de preset 0x0304: marcador BA 03 BA 6D seguido de
+    // floats 88 <4B LE> na ordem tonex_params (Builty/usb_tonex_one_parse_preset_parameters).
+    @Test fun `parse preset parameters extracts float block after marker`() {
+        val payload = byteArrayOf(
+            0xB9.toByte(), 0x03, 0x81.toByte(), 0x04, 0x03, 0x00, // header 0x0304
+            0xBA.toByte(), 0x03, 0xBA.toByte(), 0x6D, // marcador
+            0x88.toByte(), 0x00, 0x00, 0x80.toByte(), 0x3F, // 1.0f
+            0x88.toByte(), 0x33, 0x33, 0x03, 0x41, // 8.2f
+            0x00 // fim do bloco (nao-0x88)
+        )
+        val values = TonexMessages.parsePresetParameters(payload)
+        assertEquals(2, values.size)
+        assertEquals(1.0f, values[0], 0.0001f)
+        assertEquals(8.2f, values[1], 0.0001f)
+    }
+
+    @Test fun `parse preset parameters returns empty without marker`() {
+        assertEquals(0, TonexMessages.parsePresetParameters(byteArrayOf(0xB9.toByte(), 0x03)).size)
+    }
+
+    @Test fun `request state payload matches reference firmwares byte a byte`() {
+        // Bytes identicos em Builty/usb_tonex_one.c e vit3k/tonex.cpp (requestState).
+        assertArrayEquals(
+            byteArrayOf(
+                0xB9.toByte(), 0x03, 0x00, 0x82.toByte(), 0x06, 0x00,
+                0x80.toByte(), 0x0B, 0x03, 0xB9.toByte(), 0x02, 0x81.toByte(), 0x06, 0x03, 0x0B
+            ),
+            TonexMessages.requestStatePayload()
+        )
     }
 
     @Test fun `parse firmware reads ascii version from response`() {
@@ -74,6 +133,13 @@ class TonexMessagesTest {
         assertEquals(TonexMessages.PRESET_PHASE_COMMIT, frames[1].last().toInt())
     }
 
+    @Test fun `raw preset select payload matches usb reference firmware command`() {
+        assertArrayEquals(
+            byteArrayOf(0xF0.toByte(), 0x0D, 0xF7.toByte(), 0x05, 0x00, 0x01),
+            TonexMessages.rawPresetSelectPayload(0x0D)
+        )
+    }
+
     @Test fun `parse preset detail extracts active preset name from 0304 notification`() {
         val name = "John Mayer NDSP Arch SSS/Klon"
         val payload = byteArrayOf(
@@ -97,7 +163,7 @@ class TonexMessagesTest {
         assertArrayEquals(
             byteArrayOf(
                 0xB9.toByte(), 0x03, 0x81.toByte(), 0x06, 0x03,
-                0x82.toByte(), 0xA0.toByte(), 0x00, 0x80.toByte(), 0x0B, 0x03, // sufixo de COMANDO (6B)
+                0x82.toByte(), 0x05, 0x00, 0x80.toByte(), 0x0B, 0x03, // sufixo de COMANDO (6B)
                 0x10, 0x20, 0x02, 0x30, 0x40
             ),
             out
@@ -167,7 +233,7 @@ private fun encodeColorItem(r: Int, g: Int, b: Int): ByteArray {
 private fun syntheticStatePayload(activeSlotByte: Byte = 1): ByteArray {
     val header = ByteArray(22) // header bruto do StateResponse, ignorado pelo parser
     val trim = TaggedValue.encodeFloat(1.5f)
-    val flags = byteArrayOf(0x01, 0x00, 0x00) // cabSimBypass, tuningMode, campo desconhecido
+    val flags = byteArrayOf(0x00, 0x01, 0x00) // stompMode, cabSimBypass, tuningMode
     val colors = byteArrayOf(0xBA.toByte(), 3) +
         encodeColorItem(255, 0, 0) + encodeColorItem(0, 255, 0) + encodeColorItem(0, 0, 255)
     val slotAssignment = byteArrayOf(0xBC.toByte(), 6, 0x0C, 0x00, 0x08, 0x00, 0x07, 0x00)
@@ -197,6 +263,17 @@ class TonexMessagesStateTest {
         assertEquals(Rgb(0, 0, 255), state.slots[2].color)
         assertArrayEquals(payload, state.rawState)
         assertEquals(listOf(0x0C, 0x08, 0x07), state.presetIds)
+        assertEquals(PedalMode.AB, state.pedalMode)
+        assertEquals(true, state.cabSimBypass)
+    }
+
+    @Test fun `parseState decodes stomp mode byte`() {
+        val payload = syntheticStatePayload(activeSlotByte = 1)
+        payload[27] = 1
+
+        val state = TonexMessages.parseState(payload, fieldsOffset = 22)
+
+        assertEquals(PedalMode.STOMP, state.pedalMode)
     }
 
     @Test fun `presetIdForSlot resolves the preset library id assigned to each slot`() {
@@ -227,9 +304,56 @@ class TonexMessagesStateTest {
         val activeSlotOffset = TonexMessages.activeSlotOffset(payload, fieldsOffset = 22)
         val expectedBody = payload.copyOfRange(8, payload.size)
         expectedBody[activeSlotOffset - 8] = 2
-        val expectedSuffix = byteArrayOf(0x82.toByte(), 0xA0.toByte(), 0x00, 0x80.toByte(), 0x0B, 0x03)
+        expectedBody[expectedBody.size - 7] = 1
+        val expectedBodySize = expectedBody.size
+        val expectedSuffix = byteArrayOf(
+            0x82.toByte(),
+            (expectedBodySize and 0xFF).toByte(),
+            ((expectedBodySize shr 8) and 0xFF).toByte(),
+            0x80.toByte(),
+            0x0B,
+            0x03
+        )
         assertArrayEquals(payload.copyOfRange(0, 5) + expectedSuffix + expectedBody, updated)
         assertEquals(payload.size + 3, updated.size)
+    }
+
+    @Test fun `buildSwitchModePayload mutates the stomp mode byte`() {
+        val payload = syntheticStatePayload(activeSlotByte = 1)
+
+        val updated = TonexMessages.buildSwitchModePayload(payload, PedalMode.STOMP)
+
+        val expectedBody = payload.copyOfRange(8, payload.size)
+        expectedBody[19] = 1
+        expectedBody[expectedBody.size - 7] = 1
+        val expectedSuffix = byteArrayOf(
+            0x82.toByte(),
+            (expectedBody.size and 0xFF).toByte(),
+            ((expectedBody.size shr 8) and 0xFF).toByte(),
+            0x80.toByte(),
+            0x0B,
+            0x03
+        )
+        assertArrayEquals(payload.copyOfRange(0, 5) + expectedSuffix + expectedBody, updated)
+    }
+
+    @Test fun `buildSetCabSimBypassPayload mutates cab sim bypass byte`() {
+        val payload = syntheticStatePayload(activeSlotByte = 1)
+
+        val updated = TonexMessages.buildSetCabSimBypassPayload(payload, bypass = false)
+
+        val expectedBody = payload.copyOfRange(8, payload.size)
+        expectedBody[20] = 0
+        expectedBody[expectedBody.size - 7] = 1
+        val expectedSuffix = byteArrayOf(
+            0x82.toByte(),
+            (expectedBody.size and 0xFF).toByte(),
+            ((expectedBody.size shr 8) and 0xFF).toByte(),
+            0x80.toByte(),
+            0x0B,
+            0x03
+        )
+        assertArrayEquals(payload.copyOfRange(0, 5) + expectedSuffix + expectedBody, updated)
     }
 
     @Test fun `parseState reads active slot from the byte after the constant zero marker`() {

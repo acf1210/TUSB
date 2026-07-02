@@ -30,6 +30,21 @@ sealed interface PedalRuntimeEvent {
     data class PresetDetailReceived(
         val name: String,
         val messageType: Int,
+        val payloadHex: String,
+        /** Floats do bloco de parametros do 0x0304, na ordem tonex_params (vazio se ausente). */
+        val parameters: List<Float> = emptyList()
+    ) : PedalRuntimeEvent
+
+    data class FrameReceived(
+        val messageType: Int,
+        val payloadHex: String
+    ) : PedalRuntimeEvent
+
+    /** Parametro alterado no pedal (knob fisico girado): notificacao 0x0309 decodificada. */
+    data class ParameterChanged(
+        val paramIndex: Int,
+        val value: Float,
+        val messageType: Int,
         val payloadHex: String
     ) : PedalRuntimeEvent
 

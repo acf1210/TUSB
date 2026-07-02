@@ -21,9 +21,28 @@ tonex-session-*.jsonl
 
 # Artefato do compilador Kotlin
 .kotlin/
+
+# Engenharia reversa do APK oficial: mantemos so os scripts/notas proprios
+# (docs/apk-reverse-findings.md, tools/apk-reverse/*.py). Assets extraidos do
+# app oficial (icones, fontes, imagens, apk/so, decompilacao) NAO sao
+# publicados: sao propriedade da IK Multimedia, nao nosso codigo.
 tools/apk-reverse/*.apk
 tools/apk-reverse/*.so
 tools/apk-reverse/*.png
-tools/jadx/
+tools/apk-reverse/*.webp
 tools/apk-reverse/src/
 tools/apk-reverse/apktool-out/
+tools/apk-reverse/pak-extract/
+tools/jadx/
+tools/apktool/
+
+# Ferramenta de terceiros (Apktool) - baixar sob demanda, nao vendorizar.
+tools/apktool/*.jar
+
+# Anexos de sessao do harness (Claude Code / Codex), nao fazem parte do projeto.
+.codex-remote-attachments/
+
+# Artefatos temporarios de depuracao
+err.log
+*.log
+tonex-current-screen.png

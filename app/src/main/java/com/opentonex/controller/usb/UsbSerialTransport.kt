@@ -75,6 +75,7 @@ class UsbSerialTransport private constructor(
         // Settle + flush espelham a ferramenta PC conhecida-boa (sleep apos abrir) antes do 1o Hello.
         delay(PORT_SETTLE_MS)
         runCatching { serialPort.purgeHwBuffers(true, true) }
+        leftover.clear()
         usbConnection = connection
         port = serialPort
     }
@@ -83,32 +84,54 @@ class UsbSerialTransport private constructor(
         requirePort().write(bytes, IO_TIMEOUT_MS)
     }
 
+    // Bytes lidos do USB alem do frame retornado (ex.: rajada de 0x0309 quando o knob
+    // fisico gira chega em um unico chunk com VARIOS frames). Ficam guardados para a
+    // proxima chamada de readFrame em vez de serem descartados.
+    private val leftover = ArrayList<Byte>()
+
     // port.read() e bloqueante (I/O USB nativa) - roda em Dispatchers.IO para nao
     // congelar a main thread / disparar ANR quando o pedal demora ou nao responde.
     override suspend fun readFrame(timeoutMs: Long): ByteArray = withContext(Dispatchers.IO) {
         val activePort = requirePort()
         val deadline = System.currentTimeMillis() + timeoutMs
-        val buffer = ByteArray(READ_CHUNK_SIZE)
         val frame = ArrayList<Byte>()
         var sawStartFlag = false
+
+        // Consome um byte; retorna o frame completo quando a flag de fechamento chega.
+        fun consume(b: Byte): ByteArray? {
+            val isFlag = (b.toInt() and 0xFF) == FLAG
+            if (isFlag) {
+                if (sawStartFlag && frame.size > 1) {
+                    // flag de fechamento de um frame com payload real
+                    frame.add(b)
+                    return frame.toByteArray()
+                }
+                // flag de abertura, ou flag de preenchimento ocioso (0x7E repetido
+                // entre frames, sem dados no meio) - reinicia a captura aqui
+                frame.clear()
+                frame.add(b)
+                sawStartFlag = true
+            } else if (sawStartFlag) {
+                frame.add(b)
+            }
+            return null
+        }
+
+        // 1. Sobras da leitura anterior (frames que chegaram no mesmo chunk USB).
+        while (leftover.isNotEmpty()) {
+            val b = leftover.removeAt(0)
+            consume(b)?.let { return@withContext it }
+        }
+
+        // 2. Leitura nova do USB.
+        val buffer = ByteArray(READ_CHUNK_SIZE)
         while (System.currentTimeMillis() < deadline) {
             val read = activePort.read(buffer, IO_TIMEOUT_MS)
             for (i in 0 until read) {
-                val b = buffer[i]
-                val isFlag = (b.toInt() and 0xFF) == FLAG
-                if (isFlag) {
-                    if (sawStartFlag && frame.size > 1) {
-                        // flag de fechamento de um frame com payload real
-                        frame.add(b)
-                        return@withContext frame.toByteArray()
-                    }
-                    // flag de abertura, ou flag de preenchimento ocioso (0x7E repetido
-                    // entre frames, sem dados no meio) - reinicia a captura aqui
-                    frame.clear()
-                    frame.add(b)
-                    sawStartFlag = true
-                } else if (sawStartFlag) {
-                    frame.add(b)
+                consume(buffer[i])?.let { result ->
+                    // Guarda o resto do chunk para a proxima chamada.
+                    for (j in i + 1 until read) leftover.add(buffer[j])
+                    return@withContext result
                 }
             }
         }
