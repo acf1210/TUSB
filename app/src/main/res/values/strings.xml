@@ -80,4 +80,23 @@
     <string name="busy_toggle_cab">Switching IR/Cab...</string>
     <string name="busy_refreshing">Refreshing pedal state...</string>
     <string name="busy_disconnecting">Disconnecting...</string>
+    <string name="midi_devices_title">MIDI devices</string>
+    <string name="midi_scan">Scan BLE devices</string>
+    <string name="midi_scanning">Scanning…</string>
+    <string name="midi_refresh_usb">Refresh USB list</string>
+    <string name="midi_connect">Connect</string>
+    <string name="midi_disconnect">Disconnect</string>
+    <string name="midi_connected_to">Connected to %1$s</string>
+    <string name="midi_connecting_to">Connecting to %1$s…</string>
+    <string name="midi_no_devices">No MIDI devices found. Pair your footswitch (e.g. M-Vave Chocolate) and scan, or plug a USB MIDI controller through an OTG hub.</string>
+    <string name="midi_mapping_title">MIDI mapping</string>
+    <string name="midi_learn">Learn</string>
+    <string name="midi_learning">Press a switch…</string>
+    <string name="midi_cancel">Cancel</string>
+    <string name="midi_restore_default">Restore default mapping</string>
+    <string name="midi_last_message">Last MIDI message: %1$s</string>
+    <string name="midi_permission_needed">Bluetooth permission is required to scan for MIDI footswitches.</string>
+    <string name="midi_not_supported">This device does not support MIDI.</string>
+    <string name="midi_pc_note">Program Change 0–19 always loads preset 1–20 (matches M-Vave Chocolate factory default).</string>
+    <string name="midi_cc_none">—</string>
 </resources>

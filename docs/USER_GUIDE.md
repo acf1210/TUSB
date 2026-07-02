@@ -46,6 +46,42 @@ permissão USB do Android.
 4. Use **Auto** para o app escolher a corda mais próxima ou escolha a corda manualmente.
 5. Toque a corda e ajuste até aparecer **Afinado**.
 
+### MIDI
+
+Controle o app (e o pedal) com um footswitch MIDI em **Menu > MIDI**.
+
+#### M-Vave Chocolate (Bluetooth)
+
+1. Ligue o Chocolate.
+2. Toque em **Buscar dispositivos BLE** e conceda a permissão de Bluetooth.
+3. Toque em **Conectar** no dispositivo encontrado.
+4. De fábrica, o Chocolate envia Program Change 0–3, que carregam os presets 1–4.
+
+#### Controlador USB MIDI
+
+Conecte pedal e controlador ao celular pelo mesmo hub USB-C OTG e toque em
+**Atualizar lista USB**.
+
+#### Mapa padrão
+
+| MIDI | Ação |
+|---|---|
+| PC 0–19 | Carrega preset 1–20 no slot ativo (fixo) |
+| CC 20 / 21 / 22 | Slot A / B / C |
+| CC 23 / 24 | Próximo / anterior preset |
+| CC 25 | Bypass geral |
+| CC 26 | Bypass Cab (IR) |
+| CC 27–32 | Liga/desliga Gate, Comp, EQ, Mod, Delay, Reverb |
+| CC 102–106 | Knobs Bass, Mid, Treble, Gain, Volume |
+
+Toggles disparam com valor CC ≥ 64; os knobs usam a faixa completa 0–127.
+
+#### MIDI Learn
+
+1. Toque em **Learn** na ação desejada.
+2. Pise no switch do footswitch: o CC recebido fica gravado para aquela ação.
+3. **Restaurar mapa padrão** desfaz todas as personalizações.
+
 ### Menu
 
 - Atualize o estado do pedal.
@@ -93,6 +129,42 @@ permission.
 3. Choose a tuning: Standard, Drop D, half-step down, D Standard, Open G, or DADGAD.
 4. Use **Auto** so the app chooses the nearest string, or pick a string manually.
 5. Play the string and adjust until **In tune** appears.
+
+### MIDI
+
+Control the app (and the pedal) with a MIDI footswitch in **Menu > MIDI**.
+
+#### M-Vave Chocolate (Bluetooth)
+
+1. Turn the Chocolate on.
+2. Tap **Scan BLE devices** and grant the Bluetooth permission.
+3. Tap **Connect** on the discovered device.
+4. From the factory, the Chocolate sends Program Change 0–3, which load presets 1–4.
+
+#### USB MIDI controller
+
+Connect the pedal and the controller to the phone through the same USB-C OTG hub and tap
+**Refresh USB list**.
+
+#### Default map
+
+| MIDI | Action |
+|---|---|
+| PC 0–19 | Loads preset 1–20 into the active slot (fixed) |
+| CC 20 / 21 / 22 | Slot A / B / C |
+| CC 23 / 24 | Next / previous preset |
+| CC 25 | Global bypass |
+| CC 26 | Cab (IR) bypass |
+| CC 27–32 | Toggle Gate, Comp, EQ, Mod, Delay, Reverb |
+| CC 102–106 | Bass, Mid, Treble, Gain, Volume knobs |
+
+Toggles fire with CC value ≥ 64; knobs use the full 0–127 range.
+
+#### MIDI Learn
+
+1. Tap **Learn** on the desired action.
+2. Press the footswitch: the received CC is stored for that action.
+3. **Restore default mapping** undoes all customizations.
 
 ### Menu
 
@@ -142,6 +214,42 @@ de Android.
 3. Elige una afinación: Standard, Drop D, medio tono abajo, D Standard, Open G o DADGAD.
 4. Usa **Auto** para que la app elija la cuerda más cercana, o elige una cuerda manualmente.
 5. Toca la cuerda y ajusta hasta que aparezca **Afinado**.
+
+### MIDI
+
+Controla la app (y el pedal) con un footswitch MIDI en **Menú > MIDI**.
+
+#### M-Vave Chocolate (Bluetooth)
+
+1. Enciende el Chocolate.
+2. Toca **Buscar dispositivos BLE** y concede el permiso de Bluetooth.
+3. Toca **Conectar** en el dispositivo encontrado.
+4. De fábrica, el Chocolate envía Program Change 0–3, que cargan los presets 1–4.
+
+#### Controlador USB MIDI
+
+Conecta el pedal y el controlador al teléfono mediante el mismo hub USB-C OTG y toca
+**Actualizar lista USB**.
+
+#### Mapa por defecto
+
+| MIDI | Acción |
+|---|---|
+| PC 0–19 | Carga el preset 1–20 en el slot activo (fijo) |
+| CC 20 / 21 / 22 | Slot A / B / C |
+| CC 23 / 24 | Siguiente / anterior preset |
+| CC 25 | Bypass general |
+| CC 26 | Bypass Cab (IR) |
+| CC 27–32 | Activa/desactiva Gate, Comp, EQ, Mod, Delay, Reverb |
+| CC 102–106 | Knobs Bass, Mid, Treble, Gain, Volume |
+
+Los toggles se disparan con valor CC ≥ 64; los knobs usan el rango completo 0–127.
+
+#### MIDI Learn
+
+1. Toca **Learn** en la acción deseada.
+2. Pisa el switch del footswitch: el CC recibido queda guardado para esa acción.
+3. **Restaurar mapa por defecto** deshace todas las personalizaciones.
 
 ### Menú
 

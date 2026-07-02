@@ -80,4 +80,23 @@
     <string name="busy_toggle_cab">Alternando IR/Cab...</string>
     <string name="busy_refreshing">Actualizando estado del pedal...</string>
     <string name="busy_disconnecting">Desconectando...</string>
+    <string name="midi_devices_title">Dispositivos MIDI</string>
+    <string name="midi_scan">Buscar dispositivos BLE</string>
+    <string name="midi_scanning">Buscando…</string>
+    <string name="midi_refresh_usb">Actualizar lista USB</string>
+    <string name="midi_connect">Conectar</string>
+    <string name="midi_disconnect">Desconectar</string>
+    <string name="midi_connected_to">Conectado a %1$s</string>
+    <string name="midi_connecting_to">Conectando a %1$s…</string>
+    <string name="midi_no_devices">No se encontraron dispositivos MIDI. Empareja tu footswitch (p. ej. M-Vave Chocolate) y busca, o conecta un controlador USB MIDI mediante un hub OTG.</string>
+    <string name="midi_mapping_title">Mapeo MIDI</string>
+    <string name="midi_learn">Learn</string>
+    <string name="midi_learning">Pisa un switch…</string>
+    <string name="midi_cancel">Cancelar</string>
+    <string name="midi_restore_default">Restaurar mapa por defecto</string>
+    <string name="midi_last_message">Último mensaje MIDI: %1$s</string>
+    <string name="midi_permission_needed">Se necesita permiso de Bluetooth para buscar footswitches MIDI.</string>
+    <string name="midi_not_supported">Este dispositivo no es compatible con MIDI.</string>
+    <string name="midi_pc_note">Program Change 0–19 siempre carga el preset 1–20 (compatible con el ajuste de fábrica del M-Vave Chocolate).</string>
+    <string name="midi_cc_none">—</string>
 </resources>
