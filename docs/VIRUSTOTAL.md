@@ -13,7 +13,7 @@
 
 - Malicioso: `0`
 - Suspeito: `0`
-- Não detectado: `68`
+- Não detectado: `67`
 - Não suportado: `6`
 - Timeout/falha: `0`
 
@@ -32,7 +32,7 @@
 
 - Malicious: `0`
 - Suspicious: `0`
-- Undetected: `68`
+- Undetected: `67`
 - Type unsupported: `6`
 - Timeout/failure: `0`
 
@@ -51,6 +51,6 @@
 
 - Malicioso: `0`
 - Sospechoso: `0`
-- No detectado: `68`
+- No detectado: `67`
 - Tipo no soportado: `6`
 - Timeout/fallo: `0`
