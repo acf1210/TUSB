@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-1.0.1-brightgreen" />
+  <img alt="version" src="https://img.shields.io/badge/version-1.0.2-brightgreen" />
   <img alt="platform" src="https://img.shields.io/badge/platform-Android%207.0%2B-3DDC84" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue" />
   <img alt="status" src="https://img.shields.io/badge/status-community-orange" />
@@ -74,6 +74,14 @@
 
 ## 🇧🇷 Português Brasil
 
+### Destaques da V1.0.2
+
+- Suporte a footswitches MIDI por Bluetooth LE (M-Vave Chocolate e similares) e USB MIDI
+  (via hub OTG).
+- Mapa padrão pronto para uso: Program Change 0–19 carrega os presets 1–20 e CCs controlam
+  slots, bypass, efeitos da cadeia e knobs do amp.
+- MIDI Learn para remapear qualquer ação direto no app (Menu → MIDI).
+
 ### Destaques da V1.0.1
 
 - Idioma automático para Português Brasil, Inglês EUA e Espanhol.
@@ -100,6 +108,7 @@ controlar efeitos e manter o app sincronizado com o pedal em tempo real.
 - Cadeia de efeitos editável: Gate, Compressor, EQ, Mod, Delay, Reverb e Cab.
 - Metrônomo local.
 - Afinador por microfone com afinações comuns.
+- Controle por footswitch MIDI (BLE e USB) com MIDI Learn.
 - Captura JSONL para diagnóstico.
 
 ### Instalação e uso
@@ -122,6 +131,14 @@ O APK debug fica em `app/build/outputs/apk/debug/app-debug.apk`.
 ---
 
 ## 🇺🇸 English US
+
+### V1.0.2 highlights
+
+- MIDI footswitch support over Bluetooth LE (M-Vave Chocolate and similar) and USB MIDI
+  (through an OTG hub).
+- Ready-to-use default map: Program Change 0–19 loads presets 1–20 and CCs control slots,
+  bypass, effect chain blocks, and amp knobs.
+- MIDI Learn to remap any action right in the app (Menu → MIDI).
 
 ### V1.0.1 highlights
 
@@ -149,6 +166,7 @@ effects, and keep the app synchronized with the pedal in real time.
 - Editable effect chain: Gate, Compressor, EQ, Mod, Delay, Reverb, and Cab.
 - Local metronome.
 - Microphone tuner with common tunings.
+- MIDI footswitch control (BLE and USB) with MIDI Learn.
 - JSONL capture for diagnostics.
 
 ### Install and use
@@ -171,6 +189,14 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 ---
 
 ## 🇪🇸 Español
+
+### Novedades de la V1.0.2
+
+- Soporte de footswitches MIDI por Bluetooth LE (M-Vave Chocolate y similares) y USB MIDI
+  (mediante hub OTG).
+- Mapa por defecto listo para usar: Program Change 0–19 carga los presets 1–20 y los CCs
+  controlan slots, bypass, bloques de efectos y knobs del amplificador.
+- MIDI Learn para reasignar cualquier acción directamente en la app (Menú → MIDI).
 
 ### Novedades de la V1.0.1
 
@@ -198,6 +224,7 @@ controlar efectos y mantener la app sincronizada con el pedal en tiempo real.
 - Cadena de efectos editable: Gate, Compressor, EQ, Mod, Delay, Reverb y Cab.
 - Metrónomo local.
 - Afinador por micrófono con afinaciones comunes.
+- Control por footswitch MIDI (BLE y USB) con MIDI Learn.
 - Captura JSONL para diagnóstico.
 
 ### Instalación y uso
