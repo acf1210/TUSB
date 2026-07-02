@@ -32,7 +32,7 @@
 **Baixe o APK oficial da release:**  
 👉 [TUSB-v1.0.2.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.2/TUSB-v1.0.2.apk)
 
-**Verificação VirusTotal:** em análise — o resultado é publicado automaticamente na release.  
+**Verificação VirusTotal:** `0 malicioso`, `0 suspeito`, `64 não detectado`, `6 não suportado`  
 **SHA-256:** `48A1269AFDD97E4E7711CA281AAC8ED46C160C17BD819C771C0176DC3DEEB649`  
 **Relatório:** [VirusTotal](https://www.virustotal.com/gui/file/48A1269AFDD97E4E7711CA281AAC8ED46C160C17BD819C771C0176DC3DEEB649) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.2/VIRUSTOTAL.md)
 
@@ -43,7 +43,7 @@
 **Download the official release APK:**  
 👉 [TUSB-v1.0.2.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.2/TUSB-v1.0.2.apk)
 
-**VirusTotal scan:** in analysis — the result is published automatically on the release.  
+**VirusTotal scan:** `0 malicious`, `0 suspicious`, `64 undetected`, `6 unsupported`  
 **SHA-256:** `48A1269AFDD97E4E7711CA281AAC8ED46C160C17BD819C771C0176DC3DEEB649`  
 **Report:** [VirusTotal](https://www.virustotal.com/gui/file/48A1269AFDD97E4E7711CA281AAC8ED46C160C17BD819C771C0176DC3DEEB649) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.2/VIRUSTOTAL.md)
 
@@ -54,7 +54,7 @@
 **Descarga el APK oficial de la release:**  
 👉 [TUSB-v1.0.2.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.2/TUSB-v1.0.2.apk)
 
-**Verificación VirusTotal:** en análisis — el resultado se publica automáticamente en la release.  
+**Verificación VirusTotal:** `0 malicioso`, `0 sospechoso`, `64 no detectado`, `6 no soportado`  
 **SHA-256:** `48A1269AFDD97E4E7711CA281AAC8ED46C160C17BD819C771C0176DC3DEEB649`  
 **Informe:** [VirusTotal](https://www.virustotal.com/gui/file/48A1269AFDD97E4E7711CA281AAC8ED46C160C17BD819C771C0176DC3DEEB649) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.2/VIRUSTOTAL.md)
 
