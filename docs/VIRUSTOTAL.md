@@ -5,19 +5,17 @@
 **APK:** `TUSB-v1.0.1.apk`  
 **Build local:** `app/build/outputs/apk/debug/TUSB-v1.0.1.apk`  
 **SHA-256:** `E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79`  
-**Tamanho:** `21,170,396 bytes`
+**Tamanho:** `21,170,396 bytes`  
+**VirusTotal:** https://www.virustotal.com/gui/file/E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79  
+**ID da análise:** `MjRkZWMxODFiODViZGZjMmIzNjc4MjA3NzQ4OTEzMTM6MTc4MzAxMjcwMQ==`
 
-**Status:** submissão ao VirusTotal pendente. O ambiente local não possui `VT_API_KEY`, então
-não foi possível enviar o APK pela API nesta execução.
+**Resultado:** concluído em 2026-07-02.
 
-Para publicar o resultado, configure `VT_API_KEY` e execute:
-
-```bash
-curl --request POST \
-  --url https://www.virustotal.com/api/v3/files \
-  --header "x-apikey: $VT_API_KEY" \
-  --form file=@app/build/outputs/apk/debug/TUSB-v1.0.1.apk
-```
+- Malicioso: `0`
+- Suspeito: `0`
+- Não detectado: `68`
+- Não suportado: `6`
+- Timeout/falha: `0`
 
 ---
 
@@ -26,19 +24,17 @@ curl --request POST \
 **APK:** `TUSB-v1.0.1.apk`  
 **Local build:** `app/build/outputs/apk/debug/TUSB-v1.0.1.apk`  
 **SHA-256:** `E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79`  
-**Size:** `21,170,396 bytes`
+**Size:** `21,170,396 bytes`  
+**VirusTotal:** https://www.virustotal.com/gui/file/E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79  
+**Analysis ID:** `MjRkZWMxODFiODViZGZjMmIzNjc4MjA3NzQ4OTEzMTM6MTc4MzAxMjcwMQ==`
 
-**Status:** VirusTotal submission pending. The local environment does not have `VT_API_KEY`,
-so the APK could not be uploaded through the API in this run.
+**Result:** completed on 2026-07-02.
 
-To publish the result, configure `VT_API_KEY` and run:
-
-```bash
-curl --request POST \
-  --url https://www.virustotal.com/api/v3/files \
-  --header "x-apikey: $VT_API_KEY" \
-  --form file=@app/build/outputs/apk/debug/TUSB-v1.0.1.apk
-```
+- Malicious: `0`
+- Suspicious: `0`
+- Undetected: `68`
+- Type unsupported: `6`
+- Timeout/failure: `0`
 
 ---
 
@@ -47,16 +43,14 @@ curl --request POST \
 **APK:** `TUSB-v1.0.1.apk`  
 **Build local:** `app/build/outputs/apk/debug/TUSB-v1.0.1.apk`  
 **SHA-256:** `E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79`  
-**Tamaño:** `21,170,396 bytes`
+**Tamaño:** `21,170,396 bytes`  
+**VirusTotal:** https://www.virustotal.com/gui/file/E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79  
+**ID del análisis:** `MjRkZWMxODFiODViZGZjMmIzNjc4MjA3NzQ4OTEzMTM6MTc4MzAxMjcwMQ==`
 
-**Estado:** envío a VirusTotal pendiente. El entorno local no tiene `VT_API_KEY`, por lo que
-no fue posible subir el APK por API en esta ejecución.
+**Resultado:** completado el 2026-07-02.
 
-Para publicar el resultado, configura `VT_API_KEY` y ejecuta:
-
-```bash
-curl --request POST \
-  --url https://www.virustotal.com/api/v3/files \
-  --header "x-apikey: $VT_API_KEY" \
-  --form file=@app/build/outputs/apk/debug/TUSB-v1.0.1.apk
-```
+- Malicioso: `0`
+- Sospechoso: `0`
+- No detectado: `68`
+- Tipo no soportado: `6`
+- Timeout/fallo: `0`
