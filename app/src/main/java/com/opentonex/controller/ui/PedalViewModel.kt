@@ -14,6 +14,7 @@ import com.opentonex.controller.repository.ConnectionState
 import com.opentonex.controller.repository.PedalRepository
 import com.opentonex.controller.ui.editor.EffectSlotType
 import java.io.File
+import java.util.Locale
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -340,12 +341,12 @@ class PedalViewModel : ViewModel() {
         attachRepository(repo)
         viewModelScope.launch {
             try {
-                setBusy("Conectando ao pedal...")
+                setBusy(localText("Conectando ao pedal...", "Connecting to pedal...", "Conectando al pedal..."))
                 _error.value = null
                 repo.connect()
                 publishRepositoryState(repo.state.value)
             } catch (e: Exception) {
-                _error.value = e.message ?: "Falha ao conectar ao pedal"
+                _error.value = e.message ?: localText("Falha ao conectar ao pedal", "Failed to connect to pedal", "No se pudo conectar al pedal")
                 detachRepository(repo)
             } finally {
                 clearBusy()
@@ -362,11 +363,11 @@ class PedalViewModel : ViewModel() {
         if (_busy.value.isBusy) return
         viewModelScope.launch {
             try {
-                setBusy("Conectando ao pedal...")
+                setBusy(localText("Conectando ao pedal...", "Connecting to pedal...", "Conectando al pedal..."))
                 _error.value = null
                 val connection = factory()
                 if (connection == null) {
-                    _error.value = "Pedal nao encontrado via USB"
+                    _error.value = localText("Pedal não encontrado via USB", "Pedal not found over USB", "Pedal no encontrado por USB")
                     return@launch
                 }
                 val repo = PedalRepository(connection, viewModelScope)
@@ -376,7 +377,7 @@ class PedalViewModel : ViewModel() {
                 publishRepositoryState(repo.state.value)
                 startStatePolling(repo)
             } catch (e: Exception) {
-                _error.value = e.message ?: "Falha ao conectar ao pedal"
+                _error.value = e.message ?: localText("Falha ao conectar ao pedal", "Failed to connect to pedal", "No se pudo conectar al pedal")
                 repository?.let(::detachRepository)
             } finally {
                 clearBusy()
@@ -389,11 +390,11 @@ class PedalViewModel : ViewModel() {
         val repo = repository ?: return
         viewModelScope.launch {
             try {
-                setBusy("Trocando preset para ${slot.name}...")
+                setBusy(localText("Trocando preset para ${slot.name}...", "Switching preset to ${slot.name}...", "Cambiando preset a ${slot.name}..."))
                 repo.selectSlot(slot)
                 publishRepositoryState(repo.state.value)
             } catch (e: Exception) {
-                _error.value = e.message ?: "Falha ao trocar de slot"
+                _error.value = e.message ?: localText("Falha ao trocar de slot", "Failed to switch slot", "No se pudo cambiar de slot")
             } finally {
                 clearBusy()
             }
@@ -405,12 +406,12 @@ class PedalViewModel : ViewModel() {
         val repo = repository ?: return
         viewModelScope.launch {
             try {
-                setBusy("Carregando preset ${presetId + 1}...")
+                setBusy(localText("Carregando preset ${presetId + 1}...", "Loading preset ${presetId + 1}...", "Cargando preset ${presetId + 1}..."))
                 _error.value = null
                 repo.loadPresetToActiveSlot(presetId)
                 publishRepositoryState(repo.state.value)
             } catch (e: Exception) {
-                _error.value = e.message ?: "Falha ao carregar preset"
+                _error.value = e.message ?: localText("Falha ao carregar preset", "Failed to load preset", "No se pudo cargar el preset")
             } finally {
                 clearBusy()
             }
@@ -422,12 +423,12 @@ class PedalViewModel : ViewModel() {
         val repo = repository ?: return
         viewModelScope.launch {
             try {
-                setBusy("Alterando modo para ${targetMode.name}...")
+                setBusy(localText("Alterando modo para ${targetMode.name}...", "Changing mode to ${targetMode.name}...", "Cambiando modo a ${targetMode.name}..."))
                 _error.value = null
                 repo.switchMode(targetMode)
                 publishRepositoryState(repo.state.value)
             } catch (e: Exception) {
-                _error.value = e.message ?: "Falha ao alterar modo"
+                _error.value = e.message ?: localText("Falha ao alterar modo", "Failed to change mode", "No se pudo cambiar el modo")
             } finally {
                 clearBusy()
             }
@@ -439,12 +440,12 @@ class PedalViewModel : ViewModel() {
         val repo = repository ?: return
         viewModelScope.launch {
             try {
-                setBusy("Alternando bypass...")
+                setBusy(localText("Alternando bypass...", "Switching bypass...", "Alternando bypass..."))
                 _error.value = null
                 repo.toggleBypass()
                 publishRepositoryState(repo.state.value)
             } catch (e: Exception) {
-                _error.value = e.message ?: "Falha ao alternar bypass"
+                _error.value = e.message ?: localText("Falha ao alternar bypass", "Failed to switch bypass", "No se pudo alternar bypass")
             } finally {
                 clearBusy()
             }
@@ -456,12 +457,12 @@ class PedalViewModel : ViewModel() {
         val repo = repository ?: return
         viewModelScope.launch {
             try {
-                setBusy("Alternando IR/Cab...")
+                setBusy(localText("Alternando IR/Cab...", "Switching IR/Cab...", "Alternando IR/Cab..."))
                 _error.value = null
                 repo.toggleCabSimBypass()
                 publishRepositoryState(repo.state.value)
             } catch (e: Exception) {
-                _error.value = e.message ?: "Falha ao alternar IR/Cab"
+                _error.value = e.message ?: localText("Falha ao alternar IR/Cab", "Failed to switch IR/Cab", "No se pudo alternar IR/Cab")
             } finally {
                 clearBusy()
             }
@@ -473,12 +474,12 @@ class PedalViewModel : ViewModel() {
         val repo = repository ?: return
         viewModelScope.launch {
             try {
-                setBusy("Atualizando estado do pedal...")
+                setBusy(localText("Atualizando estado do pedal...", "Refreshing pedal state...", "Actualizando estado del pedal..."))
                 _error.value = null
                 repo.refreshState()
                 publishRepositoryState(repo.state.value)
             } catch (e: Exception) {
-                _error.value = e.message ?: "Falha ao atualizar o estado do pedal"
+                _error.value = e.message ?: localText("Falha ao atualizar o estado do pedal", "Failed to refresh pedal state", "No se pudo actualizar el estado del pedal")
             } finally {
                 clearBusy()
             }
@@ -526,7 +527,7 @@ class PedalViewModel : ViewModel() {
             )
             _error.value = null
         } catch (e: Exception) {
-            _error.value = e.message ?: "Falha ao iniciar a captura"
+            _error.value = e.message ?: localText("Falha ao iniciar a captura", "Failed to start capture", "No se pudo iniciar la captura")
         }
     }
 
@@ -545,7 +546,7 @@ class PedalViewModel : ViewModel() {
         val repo = repository ?: return
         viewModelScope.launch {
             try {
-                setBusy("Desconectando...")
+                setBusy(localText("Desconectando...", "Disconnecting...", "Desconectando..."))
                 repo.disconnect()
                 publishRepositoryState(repo.state.value)
                 detachRepository(repo)
@@ -565,6 +566,13 @@ class PedalViewModel : ViewModel() {
     private fun clearBusy() {
         _busy.value = UiBusyState()
     }
+
+    private fun localText(ptBr: String, enUs: String, es: String): String =
+        when (Locale.getDefault().language.lowercase(Locale.US)) {
+            "pt" -> ptBr
+            "es" -> es
+            else -> enUs
+        }
 
     private var parameterChangesJob: Job? = null
 

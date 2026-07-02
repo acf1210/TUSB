@@ -24,7 +24,7 @@ SOFTWARE.
 
 This license covers the original application source code in this repository.
 It does NOT grant any rights to third-party trademarks referenced for
-interoperability purposes. "ToneX", "ToneX One" and related marks are the
-property of IK Multimedia Production Srl. This project is an independent,
-unofficial, community-built USB controller and is not affiliated with,
-endorsed by, or sponsored by IK Multimedia. See README.md for details.
+interoperability purposes. "ToneX" and "ToneX One" are referenced only for
+interoperability. This project is an independent, unofficial, community-built
+USB controller and is not affiliated with, endorsed by, or sponsored by any
+trademark owner. See README.md for details.

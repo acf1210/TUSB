@@ -62,7 +62,7 @@ Ainda nao concluido:
 
 Hardware alvo:
 
-- IK Multimedia ToneX One.
+- ToneX One.
 - USB VID/PID observado: `0x1963 / 0x00D1`.
 - Interface usada: CDC ACM serial via Android USB host.
 - Baud rate usado pela camada serial: `115200`.

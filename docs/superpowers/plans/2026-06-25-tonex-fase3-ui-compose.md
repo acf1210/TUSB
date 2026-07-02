@@ -1,22 +1,22 @@
-# ToneX Fase 3 — UI Compose Implementation Plan
+﻿# ToneX Fase 3 â€” UI Compose Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Construir a interface completa do app (telas Connect/Home/Editor/Settings, tema escuro, navegação, responsividade phone/tablet) consumindo o `PedalRepository` já existente, substituindo o botão de debug temporário do `MainActivity`.
+**Goal:** Construir a interface completa do app (telas Connect/Home/Editor/Settings, tema escuro, navegaÃ§Ã£o, responsividade phone/tablet) consumindo o `PedalRepository` jÃ¡ existente, substituindo o botÃ£o de debug temporÃ¡rio do `MainActivity`.
 
-**Architecture:** `PedalViewModel` (AndroidX ViewModel) encapsula um `PedalRepository` e expõe `StateFlow<ConnectionState>` para a UI via `collectAsStateWithLifecycle`. Navegação via `NavHost` (Compose Navigation): `connect` → `home` (com navegação interna entre Home/Editor/Settings, só acessível quando `Connected`). Layout responsivo decide entre navegação inferior (phone) e `NavigationRail` lateral (tablet/tela larga) com base na largura da janela (`calculateWindowSizeClass`). Apenas a troca de slot (`selectSlot`) tem escrita real ponta-a-ponta hoje — a tela Editor exibe `inputTrim`/`a4Reference`/`tempo` como somente leitura, já que `UsbPedalConnection.writeState` ainda só regrava o byte do slot ativo (campos adicionais de escrita ficam para uma fase futura de protocolo).
+**Architecture:** `PedalViewModel` (AndroidX ViewModel) encapsula um `PedalRepository` e expÃµe `StateFlow<ConnectionState>` para a UI via `collectAsStateWithLifecycle`. NavegaÃ§Ã£o via `NavHost` (Compose Navigation): `connect` â†’ `home` (com navegaÃ§Ã£o interna entre Home/Editor/Settings, sÃ³ acessÃ­vel quando `Connected`). Layout responsivo decide entre navegaÃ§Ã£o inferior (phone) e `NavigationRail` lateral (tablet/tela larga) com base na largura da janela (`calculateWindowSizeClass`). Apenas a troca de slot (`selectSlot`) tem escrita real ponta-a-ponta hoje â€” a tela Editor exibe `inputTrim`/`a4Reference`/`tempo` como somente leitura, jÃ¡ que `UsbPedalConnection.writeState` ainda sÃ³ regrava o byte do slot ativo (campos adicionais de escrita ficam para uma fase futura de protocolo).
 
-**Tech Stack:** Kotlin, Jetpack Compose (Material3), Compose Navigation (`androidx.navigation:navigation-compose`), `androidx.lifecycle:lifecycle-viewmodel-compose` + `lifecycle-runtime-compose`, `androidx.compose.material3:material3-window-size-class`, `androidx.compose.material:material-icons-extended`, JUnit4 + `kotlinx-coroutines-test` (para o ViewModel, testável em JVM puro via `FakePedalConnection`).
+**Tech Stack:** Kotlin, Jetpack Compose (Material3), Compose Navigation (`androidx.navigation:navigation-compose`), `androidx.lifecycle:lifecycle-viewmodel-compose` + `lifecycle-runtime-compose`, `androidx.compose.material3:material3-window-size-class`, `androidx.compose.material:material-icons-extended`, JUnit4 + `kotlinx-coroutines-test` (para o ViewModel, testÃ¡vel em JVM puro via `FakePedalConnection`).
 
 ---
 
 ## Contexto importante
 
-- `PedalRepository` (Fase 1) já expõe `StateFlow<ConnectionState>` e os métodos `connect()`/`selectSlot()`/`disconnect()` — esta fase só consome essa API, não a modifica.
-- `UsbPedalConnection`/`UsbSerialTransport` (Fase 2) já sabem conectar ao pedal real via USB. `FakePedalConnection` (Fase 1) permite o modo demo sem hardware.
-- **Limitação real conhecida:** `TonexMessages.buildSetStatePayload` (usado por `UsbPedalConnection.writeState`) só regrava o byte de slot ativo. Editar `inputTrim`/`a4Reference`/`tempo` na UI não teria efeito no pedal real hoje — por isso a tela Editor é somente leitura para esses campos nesta fase (decisão confirmada com o usuário).
-- O `MainActivity.kt` atual tem um botão de debug temporário (`"Conectar pedal (debug)"`) da Fase 2 — esta fase o substitui completamente pela navegação real do app.
-- Paleta de cores: tema escuro inspirado no app oficial ToneX Control (fundo quase preto, superfícies cinza-escuro, destaque quente em laranja/vermelho). Não são as cores exatas da marca IK Multimedia (não verificadas), apenas uma aproximação visual consistente.
+- `PedalRepository` (Fase 1) jÃ¡ expÃµe `StateFlow<ConnectionState>` e os mÃ©todos `connect()`/`selectSlot()`/`disconnect()` â€” esta fase sÃ³ consome essa API, nÃ£o a modifica.
+- `UsbPedalConnection`/`UsbSerialTransport` (Fase 2) jÃ¡ sabem conectar ao pedal real via USB. `FakePedalConnection` (Fase 1) permite o modo demo sem hardware.
+- **LimitaÃ§Ã£o real conhecida:** `TonexMessages.buildSetStatePayload` (usado por `UsbPedalConnection.writeState`) sÃ³ regrava o byte de slot ativo. Editar `inputTrim`/`a4Reference`/`tempo` na UI nÃ£o teria efeito no pedal real hoje â€” por isso a tela Editor Ã© somente leitura para esses campos nesta fase (decisÃ£o confirmada com o usuÃ¡rio).
+- O `MainActivity.kt` atual tem um botÃ£o de debug temporÃ¡rio (`"Conectar pedal (debug)"`) da Fase 2 â€” esta fase o substitui completamente pela navegaÃ§Ã£o real do app.
+- Paleta de cores: tema escuro inspirado em controladores de audio (fundo quase preto, superficies cinza-escuro, destaque quente em laranja/vermelho). Nao sao cores oficiais verificadas, apenas uma aproximacao visual consistente.
 
 ---
 
@@ -36,29 +36,29 @@ app/src/test/java/com/opentonex/controller/ui/PedalViewModelTest.kt
 ```
 
 Responsabilidades:
-- `theme/` — só cores/tipografia/tema Material3, sem lógica.
-- `PedalViewModel` — ponte entre `PedalRepository` (corrotinas) e Compose (`StateFlow`), sem nenhuma lógica de protocolo.
-- Cada `*Screen.kt` — um composable de tela, recebe estado e callbacks via parâmetros (sem acessar o ViewModel diretamente, para serem testáveis/previsualizáveis isoladamente).
-- `ToneXApp.kt` — único lugar que conhece a árvore de navegação e decide o layout responsivo.
+- `theme/` â€” sÃ³ cores/tipografia/tema Material3, sem lÃ³gica.
+- `PedalViewModel` â€” ponte entre `PedalRepository` (corrotinas) e Compose (`StateFlow`), sem nenhuma lÃ³gica de protocolo.
+- Cada `*Screen.kt` â€” um composable de tela, recebe estado e callbacks via parÃ¢metros (sem acessar o ViewModel diretamente, para serem testÃ¡veis/previsualizÃ¡veis isoladamente).
+- `ToneXApp.kt` â€” Ãºnico lugar que conhece a Ã¡rvore de navegaÃ§Ã£o e decide o layout responsivo.
 
 ---
 
-## Task 1: Dependências de Compose (Navigation, ViewModel, WindowSizeClass, Icons)
+## Task 1: DependÃªncias de Compose (Navigation, ViewModel, WindowSizeClass, Icons)
 
 **Files:**
 - Modify: `gradle/libs.versions.toml`
 - Modify: `app/build.gradle.kts`
 
-- [ ] **Step 1: Adicionar versões e bibliotecas ao catálogo**
+- [ ] **Step 1: Adicionar versÃµes e bibliotecas ao catÃ¡logo**
 
-Em `gradle/libs.versions.toml`, na seção `[versions]`, adicione (mantendo as linhas existentes):
+Em `gradle/libs.versions.toml`, na seÃ§Ã£o `[versions]`, adicione (mantendo as linhas existentes):
 
 ```toml
 navigationCompose = "2.8.0"
 lifecycleCompose = "2.8.4"
 ```
 
-Na seção `[libraries]`, adicione (mantendo as linhas existentes):
+Na seÃ§Ã£o `[libraries]`, adicione (mantendo as linhas existentes):
 
 ```toml
 navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
@@ -69,9 +69,9 @@ compose-foundation = { module = "androidx.compose.foundation:foundation" }
 compose-material-icons = { module = "androidx.compose.material:material-icons-extended" }
 ```
 
-- [ ] **Step 2: Adicionar as dependências ao módulo app**
+- [ ] **Step 2: Adicionar as dependÃªncias ao mÃ³dulo app**
 
-Em `app/build.gradle.kts`, dentro do bloco `dependencies { ... }`, adicione (após `implementation(libs.usb.serial.android)`):
+Em `app/build.gradle.kts`, dentro do bloco `dependencies { ... }`, adicione (apÃ³s `implementation(libs.usb.serial.android)`):
 
 ```kotlin
     implementation(libs.navigation.compose)
@@ -85,7 +85,7 @@ Em `app/build.gradle.kts`, dentro do bloco `dependencies { ... }`, adicione (ap�
 - [ ] **Step 3: Sincronizar e compilar**
 
 Run: `./gradlew.bat :app:compileDebugKotlin`
-Expected: BUILD SUCCESSFUL (baixa as novas dependências do Google Maven).
+Expected: BUILD SUCCESSFUL (baixa as novas dependÃªncias do Google Maven).
 
 - [ ] **Step 4: Commit**
 
@@ -169,7 +169,7 @@ git commit -m "feat(ui): tema escuro Material3 inspirado no ToneX Control"
 
 ## Task 3: PedalViewModel (TDD)
 
-`PedalViewModel` expõe o `StateFlow` do `PedalRepository` e dois modos de conexão: real (USB, via `PedalConnection` já aberto pelo chamador) e simulado (`FakePedalConnection`, criado internamente). Como `ViewModel` puro do AndroidX não depende de `Context`/Android framework além de `androidx.lifecycle:lifecycle-viewmodel` (já transitivo via `lifecycle-viewmodel-compose`), é testável 100% em JVM.
+`PedalViewModel` expÃµe o `StateFlow` do `PedalRepository` e dois modos de conexÃ£o: real (USB, via `PedalConnection` jÃ¡ aberto pelo chamador) e simulado (`FakePedalConnection`, criado internamente). Como `ViewModel` puro do AndroidX nÃ£o depende de `Context`/Android framework alÃ©m de `androidx.lifecycle:lifecycle-viewmodel` (jÃ¡ transitivo via `lifecycle-viewmodel-compose`), Ã© testÃ¡vel 100% em JVM.
 
 **Files:**
 - Create: `app/src/main/java/com/opentonex/controller/ui/PedalViewModel.kt`
@@ -215,7 +215,7 @@ class PedalViewModelTest {
 - [ ] **Step 2: Rodar e ver falhar**
 
 Run: `./gradlew.bat :app:testDebugUnitTest --tests "*PedalViewModelTest"`
-Expected: FAIL (`PedalViewModel` não existe).
+Expected: FAIL (`PedalViewModel` nÃ£o existe).
 
 - [ ] **Step 3: Implementar**
 
@@ -296,7 +296,7 @@ git commit -m "feat(ui): PedalViewModel sobre PedalRepository, testado com FakeP
 
 ## Task 4: ConnectScreen
 
-Tela exibida quando `ConnectionState.Disconnected`. Dois botões: conectar ao pedal real (USB) ou usar o pedal simulado. A obtenção do `UsbManager`/permissão fica no `MainActivity` (que tem `Context`); `ConnectScreen` só recebe callbacks.
+Tela exibida quando `ConnectionState.Disconnected`. Dois botÃµes: conectar ao pedal real (USB) ou usar o pedal simulado. A obtenÃ§Ã£o do `UsbManager`/permissÃ£o fica no `MainActivity` (que tem `Context`); `ConnectScreen` sÃ³ recebe callbacks.
 
 **Files:**
 - Create: `app/src/main/java/com/opentonex/controller/ui/connect/ConnectScreen.kt`
@@ -379,7 +379,7 @@ git commit -m "feat(ui): tela ConnectScreen (USB real ou pedal simulado)"
 
 ## Task 5: HomeScreen
 
-Tela principal pós-conexão: firmware, seletor de slot A/B/C (escrita real via `onSelectSlot`), lista dos 3 presets com cor.
+Tela principal pÃ³s-conexÃ£o: firmware, seletor de slot A/B/C (escrita real via `onSelectSlot`), lista dos 3 presets com cor.
 
 **Files:**
 - Create: `app/src/main/java/com/opentonex/controller/ui/home/HomeScreen.kt`
@@ -508,7 +508,7 @@ git commit -m "feat(ui): tela HomeScreen (firmware, slots A/B/C, lista de preset
 
 ## Task 6: EditorScreen (somente leitura)
 
-Mostra `inputTrim`, `a4Reference` e `tempo` como informação, com nota indicando que a edição depende de trabalho futuro no protocolo. Estrutura em seções para facilitar adicionar parâmetros editáveis depois.
+Mostra `inputTrim`, `a4Reference` e `tempo` como informaÃ§Ã£o, com nota indicando que a ediÃ§Ã£o depende de trabalho futuro no protocolo. Estrutura em seÃ§Ãµes para facilitar adicionar parÃ¢metros editÃ¡veis depois.
 
 **Files:**
 - Create: `app/src/main/java/com/opentonex/controller/ui/editor/EditorScreen.kt`
@@ -615,7 +615,7 @@ fun SettingsScreen(
         Text(text = "Firmware do pedal: $firmwareVersion")
         Text(
             text = "ToneX Controller - controle nao-oficial via USB-C para o " +
-                "IK Multimedia ToneX One (versao sem Bluetooth).",
+                "ToneX One (versao sem Bluetooth).",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -640,9 +640,9 @@ git commit -m "feat(ui): tela SettingsScreen (desconectar, info de firmware)"
 
 ---
 
-## Task 8: ToneXApp — navegação e layout responsivo
+## Task 8: ToneXApp â€” navegaÃ§Ã£o e layout responsivo
 
-Une as 4 telas: `connect` é a tela inicial; ao conectar, mostra a árvore Home/Editor/Settings — em **phone**, por abas inferiores (`NavigationBar`); em **tablet** (largura não-compacta), em duas colunas (`NavigationRail` lateral + conteúdo). A decisão de largura usa `calculateWindowSizeClass`.
+Une as 4 telas: `connect` Ã© a tela inicial; ao conectar, mostra a Ã¡rvore Home/Editor/Settings â€” em **phone**, por abas inferiores (`NavigationBar`); em **tablet** (largura nÃ£o-compacta), em duas colunas (`NavigationRail` lateral + conteÃºdo). A decisÃ£o de largura usa `calculateWindowSizeClass`.
 
 **Files:**
 - Create: `app/src/main/java/com/opentonex/controller/ui/ToneXApp.kt`
@@ -831,7 +831,7 @@ private fun RailOrBarItem(
 
 - [ ] **Step 2: Atualizar `MainActivity.kt`**
 
-Substitua TODO o conteúdo do arquivo por:
+Substitua TODO o conteÃºdo do arquivo por:
 
 ```kotlin
 package com.opentonex.controller
@@ -879,7 +879,7 @@ Expected: BUILD SUCCESSFUL.
 - [ ] **Step 4: Rodar a suite completa de testes**
 
 Run: `./gradlew.bat :app:testDebugUnitTest`
-Expected: BUILD SUCCESSFUL — todos os testes de todas as fases (Fase 1 + Fase 2 + os 3 novos do `PedalViewModelTest`) continuam passando.
+Expected: BUILD SUCCESSFUL â€” todos os testes de todas as fases (Fase 1 + Fase 2 + os 3 novos do `PedalViewModelTest`) continuam passando.
 
 - [ ] **Step 5: Commit**
 
@@ -892,11 +892,11 @@ git commit -m "feat(ui): navegacao ToneXApp com layout responsivo phone/tablet"
 
 ---
 
-## Task 9: Verificação manual no dispositivo
+## Task 9: VerificaÃ§Ã£o manual no dispositivo
 
-Sem testes instrumentados de UI nesta fase (exigiriam emulador/dispositivo conectado e configuração adicional de `androidTest`, fora do escopo combinado). A verificação é manual, com o pedal físico e em modo simulado.
+Sem testes instrumentados de UI nesta fase (exigiriam emulador/dispositivo conectado e configuraÃ§Ã£o adicional de `androidTest`, fora do escopo combinado). A verificaÃ§Ã£o Ã© manual, com o pedal fÃ­sico e em modo simulado.
 
-**Files:** nenhum (apenas execução).
+**Files:** nenhum (apenas execuÃ§Ã£o).
 
 - [ ] **Step 1: Gerar o APK de debug**
 
@@ -908,43 +908,43 @@ Expected: BUILD SUCCESSFUL, gera `app/build/outputs/apk/debug/app-debug.apk`.
 Run: `adb install -r app/build/outputs/apk/debug/app-debug.apk`
 Expected: `Success`.
 
-- [ ] **Step 3: Roteiro de verificação — modo simulado**
+- [ ] **Step 3: Roteiro de verificaÃ§Ã£o â€” modo simulado**
 
-1. Abrir o app → deve mostrar a tela Connect.
-2. Tocar "Usar pedal simulado" → deve navegar para Home, mostrando firmware `SIM-1.0.0`, slot ativo A, 3 presets coloridos.
-3. Tocar slot B → o chip B fica selecionado e o preset B aparece marcado "ativo".
-4. Navegar para Editor (aba inferior) → mostra Input trim/A4/Tempo somente leitura.
-5. Navegar para Settings → mostra firmware e botão Desconectar; tocar Desconectar volta para Connect.
+1. Abrir o app â†’ deve mostrar a tela Connect.
+2. Tocar "Usar pedal simulado" â†’ deve navegar para Home, mostrando firmware `SIM-1.0.0`, slot ativo A, 3 presets coloridos.
+3. Tocar slot B â†’ o chip B fica selecionado e o preset B aparece marcado "ativo".
+4. Navegar para Editor (aba inferior) â†’ mostra Input trim/A4/Tempo somente leitura.
+5. Navegar para Settings â†’ mostra firmware e botÃ£o Desconectar; tocar Desconectar volta para Connect.
 
-- [ ] **Step 4: Roteiro de verificação — pedal real**
+- [ ] **Step 4: Roteiro de verificaÃ§Ã£o â€” pedal real**
 
 1. Conectar o ToneX One V1 ao celular via cabo USB-C OTG.
-2. Abrir o app, tocar "Conectar pedal via USB-C", conceder a permissão USB quando solicitado pelo Android.
-3. Deve navegar para Home mostrando a versão de firmware real e o slot ativo real do pedal.
-4. Tocar em outro slot na Home → o pedal físico deve trocar de preset (LED/display do pedal muda).
-5. Reabrir Home (ou voltar) → o slot ativo exibido deve refletir a troca persistida no pedal.
+2. Abrir o app, tocar "Conectar pedal via USB-C", conceder a permissÃ£o USB quando solicitado pelo Android.
+3. Deve navegar para Home mostrando a versÃ£o de firmware real e o slot ativo real do pedal.
+4. Tocar em outro slot na Home â†’ o pedal fÃ­sico deve trocar de preset (LED/display do pedal muda).
+5. Reabrir Home (ou voltar) â†’ o slot ativo exibido deve refletir a troca persistida no pedal.
 
 - [ ] **Step 5: Testar em tablet (ou emulador com tela grande)**
 
 1. Repetir o passo 3 em um dispositivo com largura de tela >= medium (`WindowWidthSizeClass.Medium`/`Expanded`).
-2. Confirmar que a navegação aparece como `NavigationRail` lateral (duas colunas) em vez de abas inferiores.
+2. Confirmar que a navegaÃ§Ã£o aparece como `NavigationRail` lateral (duas colunas) em vez de abas inferiores.
 
 - [ ] **Step 6: Registrar resultado**
 
-Se todos os passos passarem, comente no PR/commit final mencionando "Verificação manual Fase 3: OK (simulado + pedal real + tablet)". Se algo falhar, anote o passo exato e o comportamento observado antes de prosseguir.
+Se todos os passos passarem, comente no PR/commit final mencionando "VerificaÃ§Ã£o manual Fase 3: OK (simulado + pedal real + tablet)". Se algo falhar, anote o passo exato e o comportamento observado antes de prosseguir.
 
 ---
 
-## Critério de conclusão da Fase 3
+## CritÃ©rio de conclusÃ£o da Fase 3
 
 - `./gradlew.bat :app:testDebugUnitTest` passa com todos os testes (Fases 1+2+3) verdes.
-- `./gradlew.bat :app:assembleDebug` gera um APK instalável.
-- Navegação completa Connect → Home → Editor → Settings funcional em modo simulado.
-- Verificação manual com o pedal real confirma troca de slot ponta-a-ponta.
+- `./gradlew.bat :app:assembleDebug` gera um APK instalÃ¡vel.
+- NavegaÃ§Ã£o completa Connect â†’ Home â†’ Editor â†’ Settings funcional em modo simulado.
+- VerificaÃ§Ã£o manual com o pedal real confirma troca de slot ponta-a-ponta.
 - Layout responsivo confirmado (abas no phone, rail no tablet/tela larga).
 
 ## Follow-ups para fases futuras (fora do escopo desta fase)
 
-- Decifrar e implementar escrita real de `inputTrim`/`a4Reference`/`tempo` no protocolo (`TonexMessages`/`UsbPedalConnection`), depois tornar `EditorScreen` editável.
-- Decifrar parâmetros de amp/cab/FX por preset (`PresetSlot.parameters`) e expandir `EditorScreen` com os knobs correspondentes, conforme a visão original de "controle completo".
+- Decifrar e implementar escrita real de `inputTrim`/`a4Reference`/`tempo` no protocolo (`TonexMessages`/`UsbPedalConnection`), depois tornar `EditorScreen` editÃ¡vel.
+- Decifrar parÃ¢metros de amp/cab/FX por preset (`PresetSlot.parameters`) e expandir `EditorScreen` com os knobs correspondentes, conforme a visÃ£o original de "controle completo".
 - Testes instrumentados de UI (Compose `androidTest`) quando houver um dispositivo/emulador dedicado para CI.

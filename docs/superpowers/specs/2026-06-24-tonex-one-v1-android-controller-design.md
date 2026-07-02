@@ -6,7 +6,7 @@
 
 ## 1. Visão geral
 
-Aplicativo Android (phone + tablet) para controlar o pedal de guitarra **IK Multimedia ToneX One V1**
+Aplicativo Android (phone + tablet) para controlar o pedal de guitarra **ToneX One V1**
 diretamente via **USB-C**, preenchendo a lacuna deixada pelo app oficial.
 
 O app oficial `com.ikmultimediaus.android.tonexcontrol` foi feito para o **ToneX One+**, que possui

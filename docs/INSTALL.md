@@ -1,29 +1,26 @@
-<p align="center">🇧🇷 <a href="#-instalação-português">Português</a> &nbsp;|&nbsp; 🇺🇸 <a href="#-installation-english">English</a></p>
+<p align="center">
+  🇧🇷 <a href="#-instalação-português-brasil">Português Brasil</a> &nbsp;|&nbsp;
+  🇺🇸 <a href="#-installation-english-us">English US</a> &nbsp;|&nbsp;
+  🇪🇸 <a href="#-instalación-español">Español</a>
+</p>
 
 ---
 
-## 🇧🇷 Instalação (Português)
+## 🇧🇷 Instalação (Português Brasil)
 
-### Opção A — Instalar o APK pronto (mais fácil)
+### Opção A - Instalar o APK pronto
 
-1. Baixe o APK mais recente na página de
-   [Releases](../../releases) do repositório (`TUSB-vX.Y.Z.apk`).
-2. No celular Android, abra o arquivo baixado. Se aparecer um aviso de
-   "instalar apps de fontes desconhecidas", toque em **Permitir** — isso é
-   esperado, pois o app não vem da Play Store.
-3. Toque em **Instalar** e aguarde.
+1. Baixe o APK mais recente em [Releases](../../releases), arquivo `TUSB-v1.0.1.apk` ou mais novo.
+2. Abra o APK no celular Android.
+3. Se o Android pedir permissão para instalar apps de fontes desconhecidas, toque em
+   **Permitir**.
+4. Toque em **Instalar**.
 
-> **Nota:** este APK é assinado com a chave de debug padrão do Android (prática comum em
-> projetos de comunidade sem infraestrutura de assinatura de release). Ele funciona
-> normalmente, mas o Android pode mostrar um aviso genérico de "app não verificado" — isso
-> não indica um problema de segurança, apenas que o app não passou pela revisão da Play
-> Store.
+> **iOS:** a versão para iOS está em desenvolvimento. Em breve.
 
-### Opção B — Compilar a partir do código-fonte
+### Opção B - Compilar a partir do código
 
-Pré-requisitos: [Android Studio](https://developer.android.com/studio) (ou JDK 17 + Android
-SDK com `ANDROID_HOME` configurado) e o pedal **não** precisa estar conectado durante a
-compilação.
+Pré-requisitos: Android Studio ou JDK 17 + Android SDK com `ANDROID_HOME` configurado.
 
 ```bash
 git clone https://github.com/acf1210/TUSB.git
@@ -31,56 +28,44 @@ cd TUSB
 ./gradlew assembleDebug
 ```
 
-O APK gerado fica em `app/build/outputs/apk/debug/app-debug.apk`. Instale no celular com:
+O APK gerado fica em `app/build/outputs/apk/debug/app-debug.apk`. Para instalar:
 
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-(`adb` funciona tanto por cabo USB quanto por Wi-Fi — veja `adb pair`/`adb connect` se
-preferir sem cabo.)
+### Conexão inicial do ToneX One
 
-### Conectando o pedal
-
-1. Conecte o **ToneX One** ao celular usando um **cabo USB-C OTG** (o celular precisa
-   suportar modo host USB — a maioria dos Android modernos suporta).
-2. Abra o app TUSB e toque em **Conectar**.
-3. O Android vai pedir permissão para o app acessar o dispositivo USB — toque em
-   **Permitir**. Marque "usar sempre para este dispositivo" para não precisar confirmar
-   de novo.
-4. O app faz o handshake automaticamente (pode levar alguns segundos na primeira conexão)
-   e mostra o firmware do pedal na barra superior quando conectar.
+1. Conecte o ToneX One ao celular com cabo USB-C OTG de dados.
+2. Coloque o pedal em **modo Stomp**.
+3. Pressione o pedal **três vezes** para preparar a conexão inicial.
+4. Abra o TUSB e toque em **Conectar pedal via USB-C**.
+5. Quando o Android pedir permissão USB, toque em **Permitir**.
 
 ### Problemas comuns
 
 | Sintoma | Solução |
 |---|---|
-| App não pede permissão USB | Verifique se o cabo é OTG (dados), não só de carga. |
-| Conexão demora ou falha na 1ª tentativa | Normal — o app tenta reconectar automaticamente várias vezes. Toque em Conectar de novo se falhar. |
-| "App não verificado" ao instalar | Esperado para APKs fora da Play Store; veja a nota acima. |
+| O Android não pede permissão USB | Use cabo OTG de dados, não apenas cabo de carga. |
+| A primeira conexão falha | Confirme modo Stomp, pressione o pedal três vezes e toque em conectar novamente. |
+| "App não verificado" ao instalar | Esperado para APK fora da Play Store. Confira o resultado VirusTotal em `docs/VIRUSTOTAL.md`. |
 
 ---
 
-## 🇺🇸 Installation (English)
+## 🇺🇸 Installation (English US)
 
-### Option A — Install the prebuilt APK (easiest)
+### Option A - Install the prebuilt APK
 
-1. Download the latest APK from the repository's
-   [Releases](../../releases) page (`TUSB-vX.Y.Z.apk`).
-2. On your Android phone, open the downloaded file. If you see a
-   "install apps from unknown sources" warning, tap **Allow** — this is
-   expected since the app isn't distributed through the Play Store.
-3. Tap **Install** and wait.
+1. Download the latest APK from [Releases](../../releases), file `TUSB-v1.0.1.apk` or newer.
+2. Open the APK on your Android phone.
+3. If Android asks permission to install apps from unknown sources, tap **Allow**.
+4. Tap **Install**.
 
-> **Note:** this APK is signed with Android's default debug key (common practice for
-> community projects without release-signing infrastructure). It works normally, but
-> Android may show a generic "app not verified" warning — that doesn't indicate a security
-> problem, just that the app hasn't gone through Play Store review.
+> **iOS:** the iOS version is in development. Coming soon.
 
-### Option B — Build from source
+### Option B - Build from source
 
-Prerequisites: [Android Studio](https://developer.android.com/studio) (or JDK 17 + Android
-SDK with `ANDROID_HOME` set). The pedal does **not** need to be connected while building.
+Requirements: Android Studio or JDK 17 + Android SDK with `ANDROID_HOME` configured.
 
 ```bash
 git clone https://github.com/acf1210/TUSB.git
@@ -94,22 +79,63 @@ The generated APK is at `app/build/outputs/apk/debug/app-debug.apk`. Install it 
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-(`adb` works over USB cable or Wi-Fi — see `adb pair`/`adb connect` for a cable-free setup.)
+### Initial ToneX One connection
 
-### Connecting the pedal
-
-1. Connect the **ToneX One** to your phone using a **USB-C OTG cable** (your phone needs to
-   support USB host mode — most modern Android phones do).
-2. Open the TUSB app and tap **Connect**.
-3. Android will ask for permission for the app to access the USB device — tap **Allow**.
-   Check "always use for this device" so you don't have to confirm again.
-4. The app performs the handshake automatically (may take a few seconds on the first
-   connection) and shows the pedal's firmware version in the top bar once connected.
+1. Connect ToneX One to the phone with a data-capable USB-C OTG cable.
+2. Put the pedal in **Stomp mode**.
+3. Press the pedal **three times** to prepare the initial connection.
+4. Open TUSB and tap **Connect pedal via USB-C**.
+5. When Android asks for USB permission, tap **Allow**.
 
 ### Common issues
 
 | Symptom | Fix |
 |---|---|
-| App doesn't ask for USB permission | Make sure the cable is OTG (data), not charge-only. |
-| Connection is slow or fails on the 1st try | Normal — the app retries automatically several times. Tap Connect again if it fails. |
-| "App not verified" on install | Expected for APKs outside the Play Store; see note above. |
+| Android does not ask for USB permission | Use a data-capable OTG cable, not a charge-only cable. |
+| First connection fails | Confirm Stomp mode, press the pedal three times, and tap connect again. |
+| "App not verified" during install | Expected for APKs outside Play Store. Check the VirusTotal result in `docs/VIRUSTOTAL.md`. |
+
+---
+
+## 🇪🇸 Instalación (Español)
+
+### Opción A - Instalar el APK listo
+
+1. Descarga el APK más reciente en [Releases](../../releases), archivo `TUSB-v1.0.1.apk` o más nuevo.
+2. Abre el APK en el teléfono Android.
+3. Si Android pide permiso para instalar apps de fuentes desconocidas, toca **Permitir**.
+4. Toca **Instalar**.
+
+> **iOS:** la versión para iOS está en desarrollo. Próximamente.
+
+### Opción B - Compilar desde el código
+
+Requisitos: Android Studio o JDK 17 + Android SDK con `ANDROID_HOME` configurado.
+
+```bash
+git clone https://github.com/acf1210/TUSB.git
+cd TUSB
+./gradlew assembleDebug
+```
+
+El APK generado queda en `app/build/outputs/apk/debug/app-debug.apk`. Para instalar:
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+### Conexión inicial de ToneX One
+
+1. Conecta ToneX One al teléfono con un cable USB-C OTG de datos.
+2. Pon el pedal en **modo Stomp**.
+3. Presiona el pedal **tres veces** para preparar la conexión inicial.
+4. Abre TUSB y toca **Conectar pedal por USB-C**.
+5. Cuando Android pida permiso USB, toca **Permitir**.
+
+### Problemas comunes
+
+| Síntoma | Solución |
+|---|---|
+| Android no pide permiso USB | Usa un cable OTG de datos, no solo de carga. |
+| La primera conexión falla | Confirma modo Stomp, presiona el pedal tres veces y toca conectar de nuevo. |
+| "App no verificada" al instalar | Esperado para APK fuera de Play Store. Revisa el resultado VirusTotal en `docs/VIRUSTOTAL.md`. |

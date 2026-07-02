@@ -36,9 +36,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -65,11 +67,11 @@ import com.opentonex.controller.ui.menu.MenuScreen
 import com.opentonex.controller.ui.presets.PresetsScreen
 import com.opentonex.controller.ui.tools.ToolsScreen
 
-private enum class TopLevelDestination(val route: String, val label: String) {
-    EDITOR("editor", "Editor"),
-    PRESETS("presets", "Presets"),
-    TOOLS("tools", "Tools"),
-    MENU("menu", "Menu")
+private enum class TopLevelDestination(val route: String, @StringRes val labelRes: Int) {
+    EDITOR("editor", R.string.nav_editor),
+    PRESETS("presets", R.string.nav_presets),
+    TOOLS("tools", R.string.nav_tools),
+    MENU("menu", R.string.nav_menu)
 }
 
 private fun TopLevelDestination.icon() = when (this) {
@@ -135,7 +137,7 @@ fun ToneXApp(
 
     when (val current = connectionState) {
         ConnectionState.Disconnected -> ConnectScreen(
-            statusMessage = busyState.busyReason ?: "Aguardando pedal via USB-C...",
+            statusMessage = busyState.busyReason ?: stringResource(R.string.status_waiting_usb),
             isBusy = busyState.isBusy,
             errorMessage = errorMessage,
             onConnectReal = { viewModel.connectReal(onCreateRealConnection) },
@@ -222,8 +224,8 @@ private fun ConnectedApp(
                         NavigationRailItem(
                             selected = isSelected,
                             onClick = onClick,
-                            icon = { Icon(destination.icon(), contentDescription = destination.label) },
-                            label = { Text(destination.label) }
+                            icon = { Icon(destination.icon(), contentDescription = stringResource(destination.labelRes)) },
+                            label = { Text(stringResource(destination.labelRes)) }
                         )
                     }
                 }
@@ -245,8 +247,8 @@ private fun ConnectedApp(
                         NavigationBarItem(
                             selected = isSelected,
                             onClick = onClick,
-                            icon = { Icon(destination.icon(), contentDescription = destination.label) },
-                            label = { Text(destination.label) }
+                            icon = { Icon(destination.icon(), contentDescription = stringResource(destination.labelRes)) },
+                            label = { Text(stringResource(destination.labelRes)) }
                         )
                     }
                 }

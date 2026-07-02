@@ -1,109 +1,151 @@
-<p align="center">🇧🇷 <a href="#-guia-de-uso-português">Português</a> &nbsp;|&nbsp; 🇺🇸 <a href="#-user-guide-english">English</a></p>
+<p align="center">
+  🇧🇷 <a href="#-guia-de-uso-português-brasil">Português Brasil</a> &nbsp;|&nbsp;
+  🇺🇸 <a href="#-user-guide-english-us">English US</a> &nbsp;|&nbsp;
+  🇪🇸 <a href="#-guía-de-uso-español">Español</a>
+</p>
 
 ---
 
-## 🇧🇷 Guia de uso (Português)
+## 🇧🇷 Guia de uso (Português Brasil)
 
-### Visão geral das telas
+> **iOS:** versão para iOS em desenvolvimento. Em breve.
 
-O app tem 4 seções principais, acessíveis pela barra inferior (ou lateral, em tablets):
+### Conectar
 
-- **Editor** — amplificador, cadeia de efeitos e knobs do preset ativo.
-- **Presets** — troca de slot (A/B/C), biblioteca de presets e modo A/B ⇄ Stomp.
-- **Tools** — ferramentas auxiliares.
-- **Menu** — captura de eventos, ajustes globais e informações de conexão.
-
-A barra superior mostra a marca do app e, quando conectado, a **versão de firmware** do
-pedal (`FW x.x.x`).
+Para a primeira conexão, coloque o ToneX One em **modo Stomp** e pressione o pedal
+**três vezes** antes de tocar em **Conectar pedal via USB-C** no app. Depois conceda a
+permissão USB do Android.
 
 ### Editor
 
-- **Knobs do amplificador** (Bass, Mid, Treble, Gain, Volume): arraste verticalmente para
-  ajustar. O valor escrito no pedal é em tempo real — não precisa confirmar. Se você girar o
-  knob **físico** no próprio pedal, o knob virtual acompanha sozinho.
-- **Cadeia de efeitos**: cada bloco (Gate, Comp, EQ, Mod, Delay, Reverb, Cab) tem um indicador
-  verde/apagado mostrando se está ativo. Toque no bloco para abrir o detalhe.
-- **Detalhe de um bloco de efeito**: switch **"Bloco ativo"** liga/desliga o efeito no pedal
-  na hora; os 3 sliders controlam os parâmetros reais daquele bloco (os nomes mudam conforme
-  o efeito — ex.: Threshold/Depth/Release no Gate, Rate/Depth/Mix na Modulação); chaves
-  PRE/POST definem a posição do efeito na cadeia; o Delay tem ainda SYNC e NORMAL/PING-PONG.
-  Para reverb, modulação e delay, os parâmetros mostrados dependem do **modelo ativo no
-  preset** (ex.: Spring vs. Room no reverb) — o app resolve isso automaticamente.
+- Ajuste Bass, Mid, Treble, Gain e Volume arrastando os knobs.
+- O app envia os valores ao pedal em tempo real.
+- Toque em um bloco da cadeia de efeitos para abrir seus parâmetros.
+- Toque no LED do bloco para ligar/desligar Gate, Compressor, Mod, Delay, Reverb ou Cab.
 
 ### Presets
 
-- Toque em um dos **slots A/B/C** para trocar o preset ativo do pedal.
-- A **biblioteca de presets** lista os presets salvos no pedal; toque em um para carregá-lo no
-  slot ativo.
-- **A/B ⇄ Stomp**: alterna o modo de operação do pedal (2 presets rápidos vs. 3 footswitches).
-- **Bypass**: desliga o processamento do pedal (sinal passa direto). **IR/Cab**: liga/desliga
-  só a simulação de gabinete, mantendo o resto da cadeia ativo.
+- Use os slots A/B/C para trocar o preset ativo.
+- Em modo Stomp, A, B e C ficam disponíveis como cenas no pedal.
+- Em modo A/B, A e B alternam presets e o terceiro switch controla bypass.
+- Use Bypass para desligar o processamento e IR/Cab para alternar apenas a simulação de
+  gabinete.
+
+### Ferramentas
+
+#### Metrônomo
+
+- Use Play/Parar para iniciar ou interromper o clique.
+- Ajuste BPM pelos botões, slider ou botão TAP.
+
+#### Afinador
+
+1. Abra **Ferramentas > Afinador**.
+2. Toque em **Iniciar afinador** e permita o microfone.
+3. Escolha a afinação: Standard, Drop D, meio tom abaixo, D Standard, Open G ou DADGAD.
+4. Use **Auto** para o app escolher a corda mais próxima ou escolha a corda manualmente.
+5. Toque a corda e ajuste até aparecer **Afinado**.
 
 ### Menu
 
-- **Iniciar/Parar captura**: grava um log (`.jsonl`) de todos os comandos e respostas trocados
-  com o pedal — útil para diagnóstico ou para reportar um problema.
-- **Atualizar estado**: força uma releitura do estado completo do pedal.
-- Ajustes de referência de afinação (A4) e volume mestre (ainda locais ao app; a escrita
-  desses campos específicos no pedal está em mapeamento).
-
-### Dicas
-
-- O app reflete o pedal em tempo real nos dois sentidos: qualquer ajuste feito diretamente no
-  hardware (knob físico, footswitch) aparece no app sem precisar atualizar manualmente.
-- Se a conexão cair, toque em **Conectar** novamente — o app tenta o handshake automaticamente
-  várias vezes antes de desistir.
+- Atualize o estado do pedal.
+- Inicie ou pare captura JSONL para diagnóstico.
+- Ajuste a referência A4 local entre 430 e 450 Hz.
+- Desconecte o pedal quando terminar.
 
 ---
 
-## 🇺🇸 User Guide (English)
+## 🇺🇸 User Guide (English US)
 
-### Screen overview
+> **iOS:** iOS version in development. Coming soon.
 
-The app has 4 main sections, reachable from the bottom bar (or side rail, on tablets):
+### Connect
 
-- **Editor** — amp, effect chain, and knobs for the active preset.
-- **Presets** — slot switching (A/B/C), preset library, and A/B ⇄ Stomp mode.
-- **Tools** — auxiliary tools.
-- **Menu** — event capture, global settings, and connection info.
-
-The top bar shows the app brand and, once connected, the pedal's **firmware version**
-(`FW x.x.x`).
+For the first connection, put ToneX One in **Stomp mode** and press the pedal **three
+times** before tapping **Connect pedal via USB-C** in the app. Then allow Android USB
+permission.
 
 ### Editor
 
-- **Amp knobs** (Bass, Mid, Treble, Gain, Volume): drag vertically to adjust. The value is
-  written to the pedal in real time — no confirmation needed. If you turn the **physical**
-  knob on the pedal itself, the virtual knob follows automatically.
-- **Effect chain**: each block (Gate, Comp, EQ, Mod, Delay, Reverb, Cab) shows a green/off
-  indicator for whether it's active. Tap a block to open its detail screen.
-- **Effect block detail**: the **"Block active"** switch toggles the effect on the pedal
-  instantly; the 3 sliders control that block's real parameters (labels change per effect —
-  e.g. Threshold/Depth/Release for Gate, Rate/Depth/Mix for Modulation); PRE/POST chips set
-  the effect's position in the chain; Delay also has SYNC and NORMAL/PING-PONG. For reverb,
-  modulation, and delay, the parameters shown depend on the **active model in the preset**
-  (e.g. Spring vs. Room reverb) — the app resolves this automatically.
+- Adjust Bass, Mid, Treble, Gain, and Volume by dragging the knobs.
+- The app sends values to the pedal in real time.
+- Tap an effect-chain block to open its parameters.
+- Tap the block LED to enable/disable Gate, Compressor, Mod, Delay, Reverb, or Cab.
 
 ### Presets
 
-- Tap one of the **A/B/C slots** to switch the pedal's active preset.
-- The **preset library** lists presets saved on the pedal; tap one to load it into the active
-  slot.
-- **A/B ⇄ Stomp**: switches the pedal's operating mode (2 quick presets vs. 3 footswitches).
-- **Bypass**: turns off pedal processing (signal passes through unaffected). **IR/Cab**:
-  toggles only the cabinet simulation, keeping the rest of the chain active.
+- Use A/B/C slots to switch the active preset.
+- In Stomp mode, A, B, and C are available as pedal scenes.
+- In A/B mode, A and B switch presets and the third footswitch controls bypass.
+- Use Bypass to turn processing off and IR/Cab to toggle only cabinet simulation.
+
+### Tools
+
+#### Metronome
+
+- Use Play/Stop to start or stop the click.
+- Adjust BPM with buttons, slider, or TAP.
+
+#### Tuner
+
+1. Open **Tools > Tuner**.
+2. Tap **Start tuner** and allow microphone access.
+3. Choose a tuning: Standard, Drop D, half-step down, D Standard, Open G, or DADGAD.
+4. Use **Auto** so the app chooses the nearest string, or pick a string manually.
+5. Play the string and adjust until **In tune** appears.
 
 ### Menu
 
-- **Start/Stop capture**: records a log (`.jsonl`) of every command and response exchanged
-  with the pedal — useful for diagnostics or bug reports.
-- **Refresh state**: forces a full re-read of the pedal's state.
-- Tuning reference (A4) and master volume adjustments (still local to the app; writing these
-  specific fields to the pedal is still being mapped).
+- Refresh the pedal state.
+- Start or stop JSONL capture for diagnostics.
+- Adjust the local A4 reference between 430 and 450 Hz.
+- Disconnect the pedal when done.
 
-### Tips
+---
 
-- The app mirrors the pedal in real time in both directions: any adjustment made directly on
-  the hardware (physical knob, footswitch) shows up in the app without a manual refresh.
-- If the connection drops, tap **Connect** again — the app automatically retries the
-  handshake several times before giving up.
+## 🇪🇸 Guía de uso (Español)
+
+> **iOS:** versión para iOS en desarrollo. Próximamente.
+
+### Conectar
+
+Para la primera conexión, pon ToneX One en **modo Stomp** y presiona el pedal **tres
+veces** antes de tocar **Conectar pedal por USB-C** en la app. Luego permite el acceso USB
+de Android.
+
+### Editor
+
+- Ajusta Bass, Mid, Treble, Gain y Volume arrastrando los knobs.
+- La app envía los valores al pedal en tiempo real.
+- Toca un bloque de la cadena de efectos para abrir sus parámetros.
+- Toca el LED del bloque para activar/desactivar Gate, Compressor, Mod, Delay, Reverb o Cab.
+
+### Presets
+
+- Usa los slots A/B/C para cambiar el preset activo.
+- En modo Stomp, A, B y C quedan disponibles como escenas del pedal.
+- En modo A/B, A y B alternan presets y el tercer footswitch controla bypass.
+- Usa Bypass para apagar el procesamiento e IR/Cab para alternar solo la simulación de
+  gabinete.
+
+### Herramientas
+
+#### Metrónomo
+
+- Usa Play/Detener para iniciar o detener el click.
+- Ajusta BPM con botones, slider o TAP.
+
+#### Afinador
+
+1. Abre **Herramientas > Afinador**.
+2. Toca **Iniciar afinador** y permite el micrófono.
+3. Elige una afinación: Standard, Drop D, medio tono abajo, D Standard, Open G o DADGAD.
+4. Usa **Auto** para que la app elija la cuerda más cercana, o elige una cuerda manualmente.
+5. Toca la cuerda y ajusta hasta que aparezca **Afinado**.
+
+### Menú
+
+- Actualiza el estado del pedal.
+- Inicia o detén la captura JSONL para diagnóstico.
+- Ajusta la referencia A4 local entre 430 y 450 Hz.
+- Desconecta el pedal al terminar.

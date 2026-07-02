@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -82,7 +83,7 @@ fun PresetsScreen(
         }
         item { PresetLibrary(presets = libraryPresets, isBusy = isBusy, onLoadPreset = onLoadPreset) }
         item {
-            Text(text = "Slots do pedal", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(text = stringResource(R.string.presets_pedal_slots), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
         items(presets, key = { it.index }) { preset ->
             PresetRow(
@@ -158,9 +159,9 @@ private fun FootswitchDeck(
             }
             Text(
                 text = if (pedalMode == PedalMode.STOMP) {
-                    "Modo STOMP: A, B e C ficam disponíveis como cenas no pedal."
+                    stringResource(R.string.presets_stomp_hint)
                 } else {
-                    "Modo A/B: A e B alternam presets; o terceiro switch controla bypass."
+                    stringResource(R.string.presets_ab_hint)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -229,8 +230,8 @@ private fun PresetLibrary(presets: List<LibraryPreset>, isBusy: Boolean, onLoadP
     Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, shape = PanelShape) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "20 presets", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(text = "carrega no slot ativo", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = stringResource(R.string.presets_count), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(text = stringResource(R.string.presets_load_active_slot), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             LazyRow(modifier = Modifier.fillMaxWidth().height(100.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(visiblePresets, key = { it.index }) { preset ->
@@ -316,7 +317,7 @@ private fun PresetRow(preset: PresetSlot, isActive: Boolean, enabled: Boolean, o
                 Text(text = "Slot ${Slot.entries[preset.index].name}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (isActive) {
-                Text(text = "ativo", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                Text(text = stringResource(R.string.presets_active), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
             }
         }
     }

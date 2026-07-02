@@ -27,8 +27,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.opentonex.controller.R
 
 /**
  * Editor de um bloco de efeito. Os controles escrevem no pedal em tempo real via comando
@@ -65,7 +67,7 @@ fun EffectDetailScreen(
     Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "Voltar")
+                Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.effect_back))
             }
             Text(text = effect.fullName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
@@ -76,7 +78,7 @@ fun EffectDetailScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
-                Text(text = "Bloco ativo", style = MaterialTheme.typography.bodyLarge)
+                Text(text = stringResource(R.string.effect_block_active), style = MaterialTheme.typography.bodyLarge)
                 Switch(checked = enabled, onCheckedChange = { onToggleEnabled() })
             }
         }
@@ -149,7 +151,7 @@ fun EffectDetailScreen(
         }
 
         Button(onClick = onBack, colors = ButtonDefaults.buttonColors(), modifier = Modifier.fillMaxWidth()) {
-            Text("Voltar para o Editor")
+            Text(stringResource(R.string.effect_back_to_editor))
         }
     }
 }
