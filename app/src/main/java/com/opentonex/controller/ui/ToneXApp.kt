@@ -56,6 +56,7 @@ import java.io.File
 import com.opentonex.controller.R
 import com.opentonex.controller.connection.PedalConnection
 import com.opentonex.controller.domain.PedalMode
+import com.opentonex.controller.midi.MidiController
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.Slot
 import com.opentonex.controller.repository.ConnectionState
@@ -121,6 +122,7 @@ fun ToneXApp(
     onCreateRealConnection: suspend () -> PedalConnection?,
     onCreateFakeConnection: () -> PedalConnection,
     onResolveCaptureDirectory: () -> File,
+    midiController: MidiController? = null,
     viewModel: PedalViewModel = viewModel()
 ) {
     val connectionState by viewModel.state.collectAsStateWithLifecycle()
@@ -167,7 +169,8 @@ fun ToneXApp(
                 onRefreshState = viewModel::refreshState,
                 onStartCapture = { viewModel.startCapture(onResolveCaptureDirectory()) },
                 onStopCapture = viewModel::stopCapture,
-                onDisconnect = viewModel::disconnect
+                onDisconnect = viewModel::disconnect,
+                midiController = midiController
             )
             val currentError = errorMessage
             if (currentError != null) {
@@ -209,7 +212,8 @@ private fun ConnectedApp(
     onRefreshState: () -> Unit,
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
-    onDisconnect: () -> Unit
+    onDisconnect: () -> Unit,
+    midiController: MidiController? = null
 ) {
     val navController = rememberNavController()
     val destinations = TopLevelDestination.entries
@@ -233,7 +237,7 @@ private fun ConnectedApp(
                     navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
                     onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onA4ReferenceChange,
                     captureState, onRefreshState, onStartCapture, onStopCapture,
-                    onDisconnect, modifier = Modifier.fillMaxSize()
+                    onDisconnect, midiController, modifier = Modifier.fillMaxSize()
                 )
             }
         }
@@ -258,7 +262,7 @@ private fun ConnectedApp(
                 navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
                 onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onA4ReferenceChange,
                 captureState, onRefreshState, onStartCapture, onStopCapture,
-                onDisconnect, modifier = Modifier.fillMaxSize().padding(padding)
+                onDisconnect, midiController, modifier = Modifier.fillMaxSize().padding(padding)
             )
         }
     }
@@ -289,6 +293,7 @@ private fun ConnectedNavHost(
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
     onDisconnect: () -> Unit,
+    midiController: MidiController? = null,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -356,7 +361,8 @@ private fun ConnectedNavHost(
                 onRefreshState = onRefreshState,
                 onStartCapture = onStartCapture,
                 onStopCapture = onStopCapture,
-                onDisconnect = onDisconnect
+                onDisconnect = onDisconnect,
+                midiController = midiController
             )
         }
     }

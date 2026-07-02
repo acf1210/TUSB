@@ -29,8 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.opentonex.controller.R
 import com.opentonex.controller.domain.PedalState
+import com.opentonex.controller.midi.MidiController
 
 private enum class MenuTab(@StringRes val labelRes: Int) {
     DEVICE(R.string.menu_device),
@@ -57,6 +60,7 @@ fun MenuScreen(
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
     onDisconnect: () -> Unit,
+    midiController: MidiController? = null,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -68,7 +72,13 @@ fun MenuScreen(
                 Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(stringResource(tab.labelRes)) })
             }
         }
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             when (tabs[selectedTab]) {
                 MenuTab.DEVICE -> DeviceTab(
                     firmwareVersion = firmwareVersion,
@@ -88,14 +98,7 @@ fun MenuScreen(
                     inputTrim = pedal.inputTrim,
                     onMasterVolumeChange = onMasterVolumeChange
                 )
-                MenuTab.MIDI -> PlaceholderFieldsTab(
-                    fields = listOf(
-                        "MIDI Channel" to "1",
-                        "MIDI Thru" to "Off / Thru / Merge",
-                        "Clock Mode" to "Master",
-                        "Repeated PC" to "Bypass"
-                    )
-                )
+                MenuTab.MIDI -> MidiTab(controller = midiController)
                 MenuTab.TUNER -> TunerTab(
                     a4ReferenceOverride = a4ReferenceOverride,
                     pedalA4Reference = pedal.a4Reference,
