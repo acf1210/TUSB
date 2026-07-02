@@ -246,6 +246,54 @@ El APK debug se genera en `app/build/outputs/apk/debug/app-debug.apk`.
 
 ---
 
+## Créditos e fontes / Credits and sources / Créditos y fuentes
+
+### 🇧🇷 Português Brasil
+
+Este projeto foi construído de forma independente e validado de maneira cruzada contra
+projetos open-source da comunidade. Agradecemos às seguintes fontes:
+
+- [`vit3k/tonex_controller`](https://github.com/vit3k/tonex_controller) — firmware ESP32
+  open-source usado como referência para validar o framing HDLC/CRC e os offsets de
+  slot/preset.
+- [`Builty/TonexOneController`](https://github.com/Builty/TonexOneController) — firmware
+  ESP32 open-source; segunda validação independente do protocolo (Hello/wake, RequestState,
+  baud 115200) e tabela de ranges de parâmetros (`tonex_params.c`).
+- [Android MIDI API](https://developer.android.com/reference/android/media/midi/package-summary)
+  (`android.media.midi`) e a especificação **BLE MIDI** da MIDI Association para o suporte a
+  footswitches na V1.0.2.
+
+### 🇺🇸 English US
+
+This project was built independently and cross-validated against community open-source
+projects. We thank the following sources:
+
+- [`vit3k/tonex_controller`](https://github.com/vit3k/tonex_controller) — open-source ESP32
+  firmware used as a reference to validate HDLC/CRC framing and slot/preset offsets.
+- [`Builty/TonexOneController`](https://github.com/Builty/TonexOneController) — open-source
+  ESP32 firmware; a second independent validation of the protocol (Hello/wake, RequestState,
+  baud 115200) and parameter-range table (`tonex_params.c`).
+- [Android MIDI API](https://developer.android.com/reference/android/media/midi/package-summary)
+  (`android.media.midi`) and the MIDI Association **BLE MIDI** specification for the V1.0.2
+  footswitch support.
+
+### 🇪🇸 Español
+
+Este proyecto se construyó de forma independiente y se validó de forma cruzada contra
+proyectos open-source de la comunidad. Agradecemos a las siguientes fuentes:
+
+- [`vit3k/tonex_controller`](https://github.com/vit3k/tonex_controller) — firmware ESP32
+  open-source usado como referencia para validar el framing HDLC/CRC y los offsets de
+  slot/preset.
+- [`Builty/TonexOneController`](https://github.com/Builty/TonexOneController) — firmware
+  ESP32 open-source; segunda validación independiente del protocolo (Hello/wake,
+  RequestState, baud 115200) y tabla de rangos de parámetros (`tonex_params.c`).
+- [Android MIDI API](https://developer.android.com/reference/android/media/midi/package-summary)
+  (`android.media.midi`) y la especificación **BLE MIDI** de la MIDI Association para el
+  soporte de footswitches en la V1.0.2.
+
+---
+
 ## Legal
 
 This is an independent community interoperability project. It is not affiliated with,

@@ -1,5 +1,25 @@
 # Release automation
 
+## Checklist de seguranca por versao / Per-release security checklist
+
+**Regra permanente:** a cada novo versionamento, antes de publicar a release, rode a
+revisao de seguranca do repositorio. / **Standing rule:** on every new version, run the
+repository security review before publishing the release.
+
+1. `git ls-files` + `git grep` por segredos (api key, token, senha, chaves privadas),
+   e-mails pessoais, caminhos locais e IPs privados nos arquivos versionados.
+2. `git log --all --name-only` para garantir que nenhum arquivo sensivel
+   (`local.properties`, `.jks`/keystore, `.env`, `.pcap`, `.jsonl`, `.apk`, `.so`) foi
+   commitado em qualquer ponto do historico.
+3. Confirmar que `.gitignore` cobre capturas de diagnostico, artefatos de build e os
+   artefatos de engenharia reversa do app oficial (proprietarios, nunca publicar).
+4. So publicar a release depois que os itens acima passarem.
+
+Ultima revisao: v1.0.2 (2026-07-02) — repositorio limpo, sem segredos versionados nem no
+historico.
+
+---
+
 ## Portugues Brasil
 
 Toda nova release com APK deve ter verificacao VirusTotal publicada no GitHub.
