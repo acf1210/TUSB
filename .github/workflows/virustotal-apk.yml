@@ -1,0 +1,220 @@
+name: VirusTotal APK scan
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to scan, for example v1.0.1"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  scan-apk:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: release
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${{ github.event.release.tag_name }}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Check VirusTotal API key
+        run: |
+          if [ -z "$VIRUSTOTAL_API_KEY" ]; then
+            echo "Missing GitHub secret VIRUSTOTAL_API_KEY."
+            exit 1
+          fi
+
+      - name: Download APK from release
+        id: apk
+        run: |
+          mkdir -p release-assets
+          apk_path=""
+          for attempt in $(seq 1 20); do
+            rm -f release-assets/*.apk
+            gh release download "${{ steps.release.outputs.tag }}" \
+              --pattern "*.apk" \
+              --dir release-assets \
+              --clobber || true
+            apk_path="$(find release-assets -maxdepth 1 -type f -name '*.apk' | sort | head -n 1)"
+            if [ -n "$apk_path" ]; then
+              break
+            fi
+            echo "APK asset not available yet; retrying..."
+            sleep 15
+          done
+          if [ -z "$apk_path" ]; then
+            echo "No APK asset found in release ${{ steps.release.outputs.tag }}."
+            exit 1
+          fi
+          sha256="$(sha256sum "$apk_path" | awk '{print toupper($1)}')"
+          size="$(stat -c%s "$apk_path")"
+          echo "path=$apk_path" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$apk_path")" >> "$GITHUB_OUTPUT"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+          echo "size=$size" >> "$GITHUB_OUTPUT"
+
+      - name: Submit APK to VirusTotal
+        id: upload
+        run: |
+          curl --silent --show-error --fail \
+            --request POST \
+            --url "https://www.virustotal.com/api/v3/files" \
+            --header "x-apikey: $VIRUSTOTAL_API_KEY" \
+            --form "file=@${{ steps.apk.outputs.path }}" \
+            > vt-upload.json
+          analysis_id="$(python - <<'PY'
+import json
+with open("vt-upload.json", "r", encoding="utf-8") as handle:
+    print(json.load(handle)["data"]["id"])
+PY
+)"
+          echo "analysis_id=$analysis_id" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for VirusTotal analysis
+        id: vt
+        run: |
+          analysis_id="${{ steps.upload.outputs.analysis_id }}"
+          for attempt in $(seq 1 60); do
+            curl --silent --show-error --fail \
+              --request GET \
+              --url "https://www.virustotal.com/api/v3/analyses/$analysis_id" \
+              --header "x-apikey: $VIRUSTOTAL_API_KEY" \
+              > vt-analysis.json
+            status="$(python - <<'PY'
+import json
+with open("vt-analysis.json", "r", encoding="utf-8") as handle:
+    print(json.load(handle)["data"]["attributes"]["status"])
+PY
+)"
+            echo "VirusTotal status: $status"
+            if [ "$status" = "completed" ]; then
+              break
+            fi
+            sleep 15
+          done
+          if [ "$status" != "completed" ]; then
+            echo "VirusTotal analysis did not complete in time."
+            exit 1
+          fi
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+import json
+with open("vt-analysis.json", "r", encoding="utf-8") as handle:
+    attrs = json.load(handle)["data"]["attributes"]
+stats = attrs["stats"]
+for key in ["malicious", "suspicious", "undetected", "harmless", "timeout", "confirmed-timeout", "failure", "type-unsupported"]:
+    print(f"{key.replace('-', '_')}={stats.get(key, 0)}")
+PY
+
+      - name: Create VirusTotal report
+        run: |
+          report_url="https://www.virustotal.com/gui/file/${{ steps.apk.outputs.sha256 }}"
+          cat > VIRUSTOTAL.md <<EOF
+# VirusTotal - ${{ steps.release.outputs.tag }}
+
+## Portugues Brasil
+
+**APK:** \`${{ steps.apk.outputs.name }}\`  
+**SHA-256:** \`${{ steps.apk.outputs.sha256 }}\`  
+**Tamanho:** \`${{ steps.apk.outputs.size }} bytes\`  
+**VirusTotal:** $report_url  
+**ID da analise:** \`${{ steps.upload.outputs.analysis_id }}\`
+
+**Resultado:** concluido pelo GitHub Actions.
+
+- Malicioso: \`${{ steps.vt.outputs.malicious }}\`
+- Suspeito: \`${{ steps.vt.outputs.suspicious }}\`
+- Nao detectado: \`${{ steps.vt.outputs.undetected }}\`
+- Nao suportado: \`${{ steps.vt.outputs.type_unsupported }}\`
+- Timeout/falha: \`${{ steps.vt.outputs.timeout }}\` / \`${{ steps.vt.outputs.failure }}\`
+
+---
+
+## English US
+
+**APK:** \`${{ steps.apk.outputs.name }}\`  
+**SHA-256:** \`${{ steps.apk.outputs.sha256 }}\`  
+**Size:** \`${{ steps.apk.outputs.size }} bytes\`  
+**VirusTotal:** $report_url  
+**Analysis ID:** \`${{ steps.upload.outputs.analysis_id }}\`
+
+**Result:** completed by GitHub Actions.
+
+- Malicious: \`${{ steps.vt.outputs.malicious }}\`
+- Suspicious: \`${{ steps.vt.outputs.suspicious }}\`
+- Undetected: \`${{ steps.vt.outputs.undetected }}\`
+- Type unsupported: \`${{ steps.vt.outputs.type_unsupported }}\`
+- Timeout/failure: \`${{ steps.vt.outputs.timeout }}\` / \`${{ steps.vt.outputs.failure }}\`
+
+---
+
+## Espanol
+
+**APK:** \`${{ steps.apk.outputs.name }}\`  
+**SHA-256:** \`${{ steps.apk.outputs.sha256 }}\`  
+**Tamano:** \`${{ steps.apk.outputs.size }} bytes\`  
+**VirusTotal:** $report_url  
+**ID del analisis:** \`${{ steps.upload.outputs.analysis_id }}\`
+
+**Resultado:** completado por GitHub Actions.
+
+- Malicioso: \`${{ steps.vt.outputs.malicious }}\`
+- Sospechoso: \`${{ steps.vt.outputs.suspicious }}\`
+- No detectado: \`${{ steps.vt.outputs.undetected }}\`
+- Tipo no soportado: \`${{ steps.vt.outputs.type_unsupported }}\`
+- Timeout/fallo: \`${{ steps.vt.outputs.timeout }}\` / \`${{ steps.vt.outputs.failure }}\`
+EOF
+
+      - name: Attach report to release
+        run: |
+          gh release upload "${{ steps.release.outputs.tag }}" VIRUSTOTAL.md --clobber
+
+      - name: Update release notes
+        run: |
+          gh release view "${{ steps.release.outputs.tag }}" --json body --jq .body > release-body.md
+          python - <<'PY'
+from pathlib import Path
+
+start = "<!-- VIRUSTOTAL-RESULT:START -->"
+end = "<!-- VIRUSTOTAL-RESULT:END -->"
+body = Path("release-body.md").read_text(encoding="utf-8")
+if start in body and end in body:
+    before = body.split(start, 1)[0].rstrip()
+    after = body.split(end, 1)[1].lstrip()
+    body = (before + "\n\n" + after).strip()
+
+block = f"""{start}
+## VirusTotal
+
+PT-BR: resultado VirusTotal publicado automaticamente para o APK desta release.
+EN-US: VirusTotal result automatically published for this release APK.
+ES: resultado de VirusTotal publicado automaticamente para el APK de esta release.
+
+- APK: `${{ steps.apk.outputs.name }}`
+- SHA-256: `${{ steps.apk.outputs.sha256 }}`
+- PT-BR: `${{ steps.vt.outputs.malicious }}` malicioso / `${{ steps.vt.outputs.suspicious }}` suspeito / `${{ steps.vt.outputs.undetected }}` nao detectado / `${{ steps.vt.outputs.type_unsupported }}` nao suportado
+- EN-US: `${{ steps.vt.outputs.malicious }}` malicious / `${{ steps.vt.outputs.suspicious }}` suspicious / `${{ steps.vt.outputs.undetected }}` undetected / `${{ steps.vt.outputs.type_unsupported }}` unsupported
+- ES: `${{ steps.vt.outputs.malicious }}` malicioso / `${{ steps.vt.outputs.suspicious }}` sospechoso / `${{ steps.vt.outputs.undetected }}` no detectado / `${{ steps.vt.outputs.type_unsupported }}` no soportado
+- Report: https://www.virustotal.com/gui/file/${{ steps.apk.outputs.sha256 }}
+- Release asset: `VIRUSTOTAL.md`
+{end}"""
+
+Path("release-body-updated.md").write_text((body + "\n\n" + block + "\n").strip() + "\n", encoding="utf-8")
+PY
+          gh release edit "${{ steps.release.outputs.tag }}" --notes-file release-body-updated.md

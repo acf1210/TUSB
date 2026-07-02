@@ -36,6 +36,8 @@
 **SHA-256:** `E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79`  
 **Relatório:** [VirusTotal](https://www.virustotal.com/gui/file/E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.1/VIRUSTOTAL.md)
 
+**Regra para novas versões:** toda nova release com APK deve atualizar o VirusTotal automaticamente via [release automation](docs/RELEASE_AUTOMATION.md).
+
 ### 🇺🇸 English US
 
 **Download the official release APK:**  
@@ -45,6 +47,8 @@
 **SHA-256:** `E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79`  
 **Report:** [VirusTotal](https://www.virustotal.com/gui/file/E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.1/VIRUSTOTAL.md)
 
+**Rule for new versions:** every new release with an APK must update VirusTotal automatically via [release automation](docs/RELEASE_AUTOMATION.md).
+
 ### 🇪🇸 Español
 
 **Descarga el APK oficial de la release:**  
@@ -53,6 +57,8 @@
 **Verificación VirusTotal:** `0 malicioso`, `0 sospechoso`, `68 no detectado`, `6 no soportado`  
 **SHA-256:** `E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79`  
 **Informe:** [VirusTotal](https://www.virustotal.com/gui/file/E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.1/VIRUSTOTAL.md)
+
+**Regla para nuevas versiones:** cada nueva release con APK debe actualizar VirusTotal automáticamente mediante [release automation](docs/RELEASE_AUTOMATION.md).
 
 ---
 
