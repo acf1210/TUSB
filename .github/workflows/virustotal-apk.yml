@@ -1,4 +1,4 @@
-name: VirusTotal APK scan
+﻿name: VirusTotal APK scan
 
 on:
   release:
@@ -28,7 +28,7 @@ jobs:
         id: release
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            tag="${{ inputs.tag }}"
+            tag="${{ github.event.inputs.tag }}"
           else
             tag="${{ github.event.release.tag_name }}"
           fi
@@ -80,11 +80,11 @@ jobs:
             --form "file=@${{ steps.apk.outputs.path }}" \
             > vt-upload.json
           analysis_id="$(python - <<'PY'
-import json
-with open("vt-upload.json", "r", encoding="utf-8") as handle:
-    print(json.load(handle)["data"]["id"])
-PY
-)"
+          import json
+          with open("vt-upload.json", "r", encoding="utf-8") as handle:
+              print(json.load(handle)["data"]["id"])
+          PY
+          )"
           echo "analysis_id=$analysis_id" >> "$GITHUB_OUTPUT"
 
       - name: Wait for VirusTotal analysis
@@ -98,11 +98,11 @@ PY
               --header "x-apikey: $VIRUSTOTAL_API_KEY" \
               > vt-analysis.json
             status="$(python - <<'PY'
-import json
-with open("vt-analysis.json", "r", encoding="utf-8") as handle:
-    print(json.load(handle)["data"]["attributes"]["status"])
-PY
-)"
+          import json
+          with open("vt-analysis.json", "r", encoding="utf-8") as handle:
+              print(json.load(handle)["data"]["attributes"]["status"])
+          PY
+            )"
             echo "VirusTotal status: $status"
             if [ "$status" = "completed" ]; then
               break
@@ -114,72 +114,72 @@ PY
             exit 1
           fi
           python - <<'PY' >> "$GITHUB_OUTPUT"
-import json
-with open("vt-analysis.json", "r", encoding="utf-8") as handle:
-    attrs = json.load(handle)["data"]["attributes"]
-stats = attrs["stats"]
-for key in ["malicious", "suspicious", "undetected", "harmless", "timeout", "confirmed-timeout", "failure", "type-unsupported"]:
-    print(f"{key.replace('-', '_')}={stats.get(key, 0)}")
-PY
+          import json
+          with open("vt-analysis.json", "r", encoding="utf-8") as handle:
+              attrs = json.load(handle)["data"]["attributes"]
+          stats = attrs["stats"]
+          for key in ["malicious", "suspicious", "undetected", "harmless", "timeout", "confirmed-timeout", "failure", "type-unsupported"]:
+              print(f"{key.replace('-', '_')}={stats.get(key, 0)}")
+          PY
 
       - name: Create VirusTotal report
         run: |
           report_url="https://www.virustotal.com/gui/file/${{ steps.apk.outputs.sha256 }}"
           cat > VIRUSTOTAL.md <<EOF
-# VirusTotal - ${{ steps.release.outputs.tag }}
-
-## Portugues Brasil
-
-**APK:** \`${{ steps.apk.outputs.name }}\`  
-**SHA-256:** \`${{ steps.apk.outputs.sha256 }}\`  
-**Tamanho:** \`${{ steps.apk.outputs.size }} bytes\`  
-**VirusTotal:** $report_url  
-**ID da analise:** \`${{ steps.upload.outputs.analysis_id }}\`
-
-**Resultado:** concluido pelo GitHub Actions.
-
-- Malicioso: \`${{ steps.vt.outputs.malicious }}\`
-- Suspeito: \`${{ steps.vt.outputs.suspicious }}\`
-- Nao detectado: \`${{ steps.vt.outputs.undetected }}\`
-- Nao suportado: \`${{ steps.vt.outputs.type_unsupported }}\`
-- Timeout/falha: \`${{ steps.vt.outputs.timeout }}\` / \`${{ steps.vt.outputs.failure }}\`
-
----
-
-## English US
-
-**APK:** \`${{ steps.apk.outputs.name }}\`  
-**SHA-256:** \`${{ steps.apk.outputs.sha256 }}\`  
-**Size:** \`${{ steps.apk.outputs.size }} bytes\`  
-**VirusTotal:** $report_url  
-**Analysis ID:** \`${{ steps.upload.outputs.analysis_id }}\`
-
-**Result:** completed by GitHub Actions.
-
-- Malicious: \`${{ steps.vt.outputs.malicious }}\`
-- Suspicious: \`${{ steps.vt.outputs.suspicious }}\`
-- Undetected: \`${{ steps.vt.outputs.undetected }}\`
-- Type unsupported: \`${{ steps.vt.outputs.type_unsupported }}\`
-- Timeout/failure: \`${{ steps.vt.outputs.timeout }}\` / \`${{ steps.vt.outputs.failure }}\`
-
----
-
-## Espanol
-
-**APK:** \`${{ steps.apk.outputs.name }}\`  
-**SHA-256:** \`${{ steps.apk.outputs.sha256 }}\`  
-**Tamano:** \`${{ steps.apk.outputs.size }} bytes\`  
-**VirusTotal:** $report_url  
-**ID del analisis:** \`${{ steps.upload.outputs.analysis_id }}\`
-
-**Resultado:** completado por GitHub Actions.
-
-- Malicioso: \`${{ steps.vt.outputs.malicious }}\`
-- Sospechoso: \`${{ steps.vt.outputs.suspicious }}\`
-- No detectado: \`${{ steps.vt.outputs.undetected }}\`
-- Tipo no soportado: \`${{ steps.vt.outputs.type_unsupported }}\`
-- Timeout/fallo: \`${{ steps.vt.outputs.timeout }}\` / \`${{ steps.vt.outputs.failure }}\`
-EOF
+          # VirusTotal - ${{ steps.release.outputs.tag }}
+          
+          ## Portugues Brasil
+          
+          **APK:** \`${{ steps.apk.outputs.name }}\`  
+          **SHA-256:** \`${{ steps.apk.outputs.sha256 }}\`  
+          **Tamanho:** \`${{ steps.apk.outputs.size }} bytes\`  
+          **VirusTotal:** $report_url  
+          **ID da analise:** \`${{ steps.upload.outputs.analysis_id }}\`
+          
+          **Resultado:** concluido pelo GitHub Actions.
+          
+          - Malicioso: \`${{ steps.vt.outputs.malicious }}\`
+          - Suspeito: \`${{ steps.vt.outputs.suspicious }}\`
+          - Nao detectado: \`${{ steps.vt.outputs.undetected }}\`
+          - Nao suportado: \`${{ steps.vt.outputs.type_unsupported }}\`
+          - Timeout/falha: \`${{ steps.vt.outputs.timeout }}\` / \`${{ steps.vt.outputs.failure }}\`
+          
+          ---
+          
+          ## English US
+          
+          **APK:** \`${{ steps.apk.outputs.name }}\`  
+          **SHA-256:** \`${{ steps.apk.outputs.sha256 }}\`  
+          **Size:** \`${{ steps.apk.outputs.size }} bytes\`  
+          **VirusTotal:** $report_url  
+          **Analysis ID:** \`${{ steps.upload.outputs.analysis_id }}\`
+          
+          **Result:** completed by GitHub Actions.
+          
+          - Malicious: \`${{ steps.vt.outputs.malicious }}\`
+          - Suspicious: \`${{ steps.vt.outputs.suspicious }}\`
+          - Undetected: \`${{ steps.vt.outputs.undetected }}\`
+          - Type unsupported: \`${{ steps.vt.outputs.type_unsupported }}\`
+          - Timeout/failure: \`${{ steps.vt.outputs.timeout }}\` / \`${{ steps.vt.outputs.failure }}\`
+          
+          ---
+          
+          ## Espanol
+          
+          **APK:** \`${{ steps.apk.outputs.name }}\`  
+          **SHA-256:** \`${{ steps.apk.outputs.sha256 }}\`  
+          **Tamano:** \`${{ steps.apk.outputs.size }} bytes\`  
+          **VirusTotal:** $report_url  
+          **ID del analisis:** \`${{ steps.upload.outputs.analysis_id }}\`
+          
+          **Resultado:** completado por GitHub Actions.
+          
+          - Malicioso: \`${{ steps.vt.outputs.malicious }}\`
+          - Sospechoso: \`${{ steps.vt.outputs.suspicious }}\`
+          - No detectado: \`${{ steps.vt.outputs.undetected }}\`
+          - Tipo no soportado: \`${{ steps.vt.outputs.type_unsupported }}\`
+          - Timeout/fallo: \`${{ steps.vt.outputs.timeout }}\` / \`${{ steps.vt.outputs.failure }}\`
+          EOF
 
       - name: Attach report to release
         run: |
@@ -196,40 +196,40 @@ EOF
         run: |
           gh release view "${{ steps.release.outputs.tag }}" --json body --jq .body > release-body.md
           python - <<'PY'
-import os
-from pathlib import Path
-
-start = "<!-- VIRUSTOTAL-RESULT:START -->"
-end = "<!-- VIRUSTOTAL-RESULT:END -->"
-body = Path("release-body.md").read_text(encoding="utf-8")
-if start in body and end in body:
-    before = body.split(start, 1)[0].rstrip()
-    after = body.split(end, 1)[1].lstrip()
-    body = (before + "\n\n" + after).strip()
-
-apk_name = os.environ["APK_NAME"]
-apk_sha256 = os.environ["APK_SHA256"]
-malicious = os.environ["VT_MALICIOUS"]
-suspicious = os.environ["VT_SUSPICIOUS"]
-undetected = os.environ["VT_UNDETECTED"]
-unsupported = os.environ["VT_UNSUPPORTED"]
-
-block = f"""{start}
-## VirusTotal
-
-PT-BR: resultado VirusTotal publicado automaticamente para o APK desta release.
-EN-US: VirusTotal result automatically published for this release APK.
-ES: resultado de VirusTotal publicado automaticamente para el APK de esta release.
-
-- APK: `{apk_name}`
-- SHA-256: `{apk_sha256}`
-- PT-BR: `{malicious}` malicioso / `{suspicious}` suspeito / `{undetected}` nao detectado / `{unsupported}` nao suportado
-- EN-US: `{malicious}` malicious / `{suspicious}` suspicious / `{undetected}` undetected / `{unsupported}` unsupported
-- ES: `{malicious}` malicioso / `{suspicious}` sospechoso / `{undetected}` no detectado / `{unsupported}` no soportado
-- Report: https://www.virustotal.com/gui/file/{apk_sha256}
-- Release asset: `VIRUSTOTAL.md`
-{end}"""
-
-Path("release-body-updated.md").write_text((body + "\n\n" + block + "\n").strip() + "\n", encoding="utf-8")
-PY
+          import os
+          from pathlib import Path
+          
+          start = "<!-- VIRUSTOTAL-RESULT:START -->"
+          end = "<!-- VIRUSTOTAL-RESULT:END -->"
+          body = Path("release-body.md").read_text(encoding="utf-8")
+          if start in body and end in body:
+              before = body.split(start, 1)[0].rstrip()
+              after = body.split(end, 1)[1].lstrip()
+              body = (before + "\n\n" + after).strip()
+          
+          apk_name = os.environ["APK_NAME"]
+          apk_sha256 = os.environ["APK_SHA256"]
+          malicious = os.environ["VT_MALICIOUS"]
+          suspicious = os.environ["VT_SUSPICIOUS"]
+          undetected = os.environ["VT_UNDETECTED"]
+          unsupported = os.environ["VT_UNSUPPORTED"]
+          
+          block = f"""{start}
+          ## VirusTotal
+          
+          PT-BR: resultado VirusTotal publicado automaticamente para o APK desta release.
+          EN-US: VirusTotal result automatically published for this release APK.
+          ES: resultado de VirusTotal publicado automaticamente para el APK de esta release.
+          
+          - APK: `{apk_name}`
+          - SHA-256: `{apk_sha256}`
+          - PT-BR: `{malicious}` malicioso / `{suspicious}` suspeito / `{undetected}` nao detectado / `{unsupported}` nao suportado
+          - EN-US: `{malicious}` malicious / `{suspicious}` suspicious / `{undetected}` undetected / `{unsupported}` unsupported
+          - ES: `{malicious}` malicioso / `{suspicious}` sospechoso / `{undetected}` no detectado / `{unsupported}` no soportado
+          - Report: https://www.virustotal.com/gui/file/{apk_sha256}
+          - Release asset: `VIRUSTOTAL.md`
+          {end}"""
+          
+          Path("release-body-updated.md").write_text((body + "\n\n" + block + "\n").strip() + "\n", encoding="utf-8")
+          PY
           gh release edit "${{ steps.release.outputs.tag }}" --notes-file release-body-updated.md
