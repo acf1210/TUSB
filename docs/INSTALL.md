@@ -26,8 +26,8 @@ SDK com `ANDROID_HOME` configurado) e o pedal **não** precisa estar conectado d
 compilação.
 
 ```bash
-git clone https://github.com/acf1210/tonex-one-android-controller.git
-cd tonex-one-android-controller
+git clone https://github.com/acf1210/TUSB.git
+cd TUSB
 ./gradlew assembleDebug
 ```
 
@@ -83,8 +83,8 @@ Prerequisites: [Android Studio](https://developer.android.com/studio) (or JDK 17
 SDK with `ANDROID_HOME` set). The pedal does **not** need to be connected while building.
 
 ```bash
-git clone https://github.com/acf1210/tonex-one-android-controller.git
-cd tonex-one-android-controller
+git clone https://github.com/acf1210/TUSB.git
+cd TUSB
 ./gradlew assembleDebug
 ```
 

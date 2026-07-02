@@ -108,8 +108,8 @@ cruzado com dois firmwares open-source de referência:
 ### Contribuindo / build local
 
 ```bash
-git clone https://github.com/acf1210/tonex-one-android-controller.git
-cd tonex-one-android-controller
+git clone https://github.com/acf1210/TUSB.git
+cd TUSB
 ./gradlew assembleDebug   # gera app/build/outputs/apk/debug/app-debug.apk
 ./gradlew test            # roda a suite de testes
 ```
@@ -197,8 +197,8 @@ cross-checked against two open-source reference firmwares:
 ### Contributing / building locally
 
 ```bash
-git clone https://github.com/acf1210/tonex-one-android-controller.git
-cd tonex-one-android-controller
+git clone https://github.com/acf1210/TUSB.git
+cd TUSB
 ./gradlew assembleDebug   # produces app/build/outputs/apk/debug/app-debug.apk
 ./gradlew test            # runs the test suite
 ```
