@@ -1,56 +1,53 @@
-# VirusTotal - TUSB v1.0.1
+# VirusTotal - v1.0.3
 
-## Português Brasil
+## Portugues Brasil
 
-**APK:** `TUSB-v1.0.1.apk`  
-**Build local:** `app/build/outputs/apk/debug/TUSB-v1.0.1.apk`  
-**SHA-256:** `E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79`  
-**Tamanho:** `21,170,396 bytes`  
-**VirusTotal:** https://www.virustotal.com/gui/file/E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79  
-**ID da análise:** `MjRkZWMxODFiODViZGZjMmIzNjc4MjA3NzQ4OTEzMTM6MTc4MzAxMjcwMQ==`
+**APK:** `TUSB-v1.0.3.apk`
+**SHA-256:** `4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E`
+**Tamanho:** `21714939 bytes`
+**VirusTotal:** https://www.virustotal.com/gui/file/4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E
+**ID da analise:** `NWU1ZjYwNTMwMzk4OGU2YjRjNzIwMWM2NDQ0Yjk1YWQ6MTc4MzEzMDg0OA==`
 
-**Resultado:** concluído em 2026-07-02.
+**Resultado:** concluido pelo GitHub Actions.
 
 - Malicioso: `0`
 - Suspeito: `0`
-- Não detectado: `67`
-- Não suportado: `6`
-- Timeout/falha: `0`
+- Nao detectado: `67`
+- Nao suportado: `6`
+- Timeout/falha: `0` / `1`
 
 ---
 
 ## English US
 
-**APK:** `TUSB-v1.0.1.apk`  
-**Local build:** `app/build/outputs/apk/debug/TUSB-v1.0.1.apk`  
-**SHA-256:** `E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79`  
-**Size:** `21,170,396 bytes`  
-**VirusTotal:** https://www.virustotal.com/gui/file/E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79  
-**Analysis ID:** `MjRkZWMxODFiODViZGZjMmIzNjc4MjA3NzQ4OTEzMTM6MTc4MzAxMjcwMQ==`
+**APK:** `TUSB-v1.0.3.apk`
+**SHA-256:** `4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E`
+**Size:** `21714939 bytes`
+**VirusTotal:** https://www.virustotal.com/gui/file/4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E
+**Analysis ID:** `NWU1ZjYwNTMwMzk4OGU2YjRjNzIwMWM2NDQ0Yjk1YWQ6MTc4MzEzMDg0OA==`
 
-**Result:** completed on 2026-07-02.
+**Result:** completed by GitHub Actions.
 
 - Malicious: `0`
 - Suspicious: `0`
 - Undetected: `67`
 - Type unsupported: `6`
-- Timeout/failure: `0`
+- Timeout/failure: `0` / `1`
 
 ---
 
-## Español
+## Espanol
 
-**APK:** `TUSB-v1.0.1.apk`  
-**Build local:** `app/build/outputs/apk/debug/TUSB-v1.0.1.apk`  
-**SHA-256:** `E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79`  
-**Tamaño:** `21,170,396 bytes`  
-**VirusTotal:** https://www.virustotal.com/gui/file/E6A31F28142B53B8CD7C9DD8DD30D1C2A5C46B74FD5DD544A56B8449E4130A79  
-**ID del análisis:** `MjRkZWMxODFiODViZGZjMmIzNjc4MjA3NzQ4OTEzMTM6MTc4MzAxMjcwMQ==`
+**APK:** `TUSB-v1.0.3.apk`
+**SHA-256:** `4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E`
+**Tamano:** `21714939 bytes`
+**VirusTotal:** https://www.virustotal.com/gui/file/4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E
+**ID del analisis:** `NWU1ZjYwNTMwMzk4OGU2YjRjNzIwMWM2NDQ0Yjk1YWQ6MTc4MzEzMDg0OA==`
 
-**Resultado:** completado el 2026-07-02.
+**Resultado:** completado por GitHub Actions.
 
 - Malicioso: `0`
 - Sospechoso: `0`
 - No detectado: `67`
 - Tipo no soportado: `6`
-- Timeout/fallo: `0`
+- Timeout/fallo: `0` / `1`
