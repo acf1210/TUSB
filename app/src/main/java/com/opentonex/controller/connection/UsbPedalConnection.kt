@@ -23,6 +23,7 @@ class UsbPedalConnection(
     private val events = MutableSharedFlow<PedalRuntimeEvent>(extraBufferCapacity = 64)
     private var lastPresetNameFromNotification: String? = null
     private var lastPresetParamsFromNotification: List<Float>? = null
+    private val localParameterWriteAt = mutableMapOf<Int, Long>()
 
     override val runtimeEvents: Flow<PedalRuntimeEvent> = events.asSharedFlow()
 
@@ -45,6 +46,7 @@ class UsbPedalConnection(
             exhaustedMessage = "pedal nao respondeu ao Hello apos $HANDSHAKE_ATTEMPTS tentativas"
         )
         val firmware = TonexMessages.parseFirmware(response)
+            .copy(serialNumber = transport.deviceSerialNumber)
         emitEvent(
             PedalRuntimeEvent.HelloResponseReceived(
                 firmwareVersion = firmware.version,
@@ -228,7 +230,23 @@ class UsbPedalConnection(
         val frame = HdlcCodec.encode(payload)
         android.util.Log.d("ToneXConn", "writeParameter index=$paramIndex value=$value frame(${frame.size}B)")
         emitRequestEvent(requestKind = "write_parameter", payload = payload)
+        // Mantem o cache do 0x0304 coerente com a escrita: sem isto, o proximo StateResponse
+        // re-aplicava os parametros VELHOS do cache e o knob virtual voltava ao valor inicial.
+        cacheParameterValue(paramIndex, value)
+        localParameterWriteAt[paramIndex] = System.currentTimeMillis()
         transport.write(frame)
+    }
+
+    /**
+     * Atualiza um parametro no cache do ultimo detalhe 0x0304. O pedal NAO reenvia o
+     * detalhe apos escritas 0x0309 (nossas ou de knob fisico); como o cache e re-aplicado
+     * a cada StateResponse (decodeStateFromResponse), ele precisa acompanhar as mudancas
+     * ou os knobs "voltam sozinhos" no poll seguinte.
+     */
+    private fun cacheParameterValue(index: Int, value: Float) {
+        val params = lastPresetParamsFromNotification ?: return
+        if (index !in params.indices) return
+        lastPresetParamsFromNotification = params.toMutableList().also { it[index] = value }
     }
 
     override suspend fun disconnect() {
@@ -336,7 +354,14 @@ class UsbPedalConnection(
             android.util.Log.w("ToneXConn", "paramChange nao parseado: ${payload.toHex()}")
             return
         }
+        val lastLocalWrite = localParameterWriteAt[change.index] ?: 0L
+        if (System.currentTimeMillis() - lastLocalWrite < PARAM_ECHO_SUPPRESS_MS) {
+            android.util.Log.d("ToneXConn", "paramChange echo ignored index=${change.index} value=${change.value}")
+            return
+        }
         android.util.Log.d("ToneXConn", "paramChange index=${change.index} value=${change.value}")
+        // Knob fisico girado: cache acompanha, senao o proximo re-sync reverte o valor.
+        cacheParameterValue(change.index, change.value)
         emitEvent(
             PedalRuntimeEvent.ParameterChanged(
                 paramIndex = change.index,
@@ -430,5 +455,6 @@ class UsbPedalConnection(
         private const val PASSIVE_READ_TIMEOUT_MS = 250L
         private const val PASSIVE_DRAIN_MAX_FRAMES = 64
         private const val PASSIVE_DRAIN_NEXT_TIMEOUT_MS = 60L
+        private const val PARAM_ECHO_SUPPRESS_MS = 1500L
     }
 }

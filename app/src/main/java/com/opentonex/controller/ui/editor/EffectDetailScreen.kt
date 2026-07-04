@@ -1,24 +1,25 @@
 package com.opentonex.controller.ui.editor
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,24 +27,40 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.opentonex.controller.R
+import com.opentonex.controller.ui.EffectControl
+import com.opentonex.controller.ui.EffectDetailUiState
+import com.opentonex.controller.ui.components.KnobSize
+import com.opentonex.controller.ui.components.TusbKnob
+import com.opentonex.controller.ui.components.TusbSegmentedRow
+import com.opentonex.controller.ui.components.tusbBackground
+import com.opentonex.controller.ui.theme.MonoLabelStyle
+import com.opentonex.controller.ui.theme.ToneXBackground
+import com.opentonex.controller.ui.theme.ToneXDivider
+import com.opentonex.controller.ui.theme.ToneXGreen
+import com.opentonex.controller.ui.theme.ToneXOnSurfaceMuted
+import com.opentonex.controller.ui.theme.ToneXSurfaceHigh
 
 /**
- * Editor de um bloco de efeito. Os controles escrevem no pedal em tempo real via comando
- * de parametro unico 0x0309 (ver TonexEffectParams); os valores iniciais vem do bloco de
- * parametros do preset ativo (detalhe 0x0304).
+ * Editor de um bloco de efeito no layout do design TUSB (tela "Effect Detail"):
+ * cabecalho com o nome do bloco, seletor de modo segmentado, knobs verdes de 300
+ * graus e segmentos PRE/POST + SYNC. Os controles escrevem no pedal em tempo real
+ * via comando de parametro unico 0x0309.
  */
 @Composable
 fun EffectDetailScreen(
     effect: EffectSlotType,
     enabled: Boolean,
-    detail: com.opentonex.controller.ui.EffectDetailUiState,
+    detail: EffectDetailUiState,
     onToggleEnabled: () -> Unit,
-    onControlChange: (com.opentonex.controller.ui.EffectControl, Float) -> Unit,
+    onControlChange: (EffectControl, Float) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -64,105 +81,142 @@ fun EffectDetailScreen(
         EffectSlotType.CAB -> Triple("MIC BLEND", "RESONANCE", "MIC POSITION")
     }
 
-    Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+    Box(
+        modifier = modifier.fillMaxSize().tusbBackground(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+    Column(modifier = Modifier.widthIn(max = 620.dp).fillMaxSize()) {
+        // Cabecalho: voltar + nome do bloco + switch de ativo
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.effect_back))
-            }
-            Text(text = effect.fullName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        }
-
-        Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(8.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                Text(text = stringResource(R.string.effect_block_active), style = MaterialTheme.typography.bodyLarge)
-                Switch(checked = enabled, onCheckedChange = { onToggleEnabled() })
-            }
-        }
-
-        if (effect == EffectSlotType.DLY) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = normalMode,
-                    onClick = {
-                        normalMode = true
-                        onControlChange(com.opentonex.controller.ui.EffectControl.DELAY_PINGPONG, 0f)
-                    },
-                    label = { Text("NORMAL") }
-                )
-                FilterChip(
-                    selected = !normalMode,
-                    onClick = {
-                        normalMode = false
-                        onControlChange(com.opentonex.controller.ui.EffectControl.DELAY_PINGPONG, 1f)
-                    },
-                    label = { Text("PING PONG") }
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.effect_back),
+                    tint = ToneXOnSurfaceMuted
                 )
             }
+            Text(
+                text = effect.label,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White
+            )
+            Text(
+                text = effect.fullName,
+                fontSize = 18.sp,
+                color = ToneXOnSurfaceMuted,
+                modifier = Modifier.padding(start = 8.dp).weight(1f)
+            )
+            Switch(
+                checked = enabled,
+                onCheckedChange = { onToggleEnabled() },
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = ToneXGreen,
+                    checkedThumbColor = Color(0xFF111111)
+                )
+            )
         }
 
-        Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(8.dp)) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                EffectSliderRow(label = labelA, value = knobA, onValueChange = {
-                    knobA = it
-                    onControlChange(com.opentonex.controller.ui.EffectControl.KNOB_A, it)
-                })
-                EffectSliderRow(label = labelB, value = knobB, onValueChange = {
-                    knobB = it
-                    onControlChange(com.opentonex.controller.ui.EffectControl.KNOB_B, it)
-                })
-                EffectSliderRow(label = labelC, value = knobC, onValueChange = {
-                    knobC = it
-                    onControlChange(com.opentonex.controller.ui.EffectControl.KNOB_C, it)
-                })
-            }
-        }
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(ToneXDivider))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            FilterChip(
-                selected = !postPosition,
-                onClick = {
-                    postPosition = false
-                    onControlChange(com.opentonex.controller.ui.EffectControl.POST, 0f)
-                },
-                label = { Text("PRE") }
-            )
-            FilterChip(
-                selected = postPosition,
-                onClick = {
-                    postPosition = true
-                    onControlChange(com.opentonex.controller.ui.EffectControl.POST, 1f)
-                },
-                label = { Text("POST") }
-            )
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Seletor de modo do delay: NORMAL / PING PONG
             if (effect == EffectSlotType.DLY) {
-                FilterChip(
-                    selected = sync,
-                    onClick = {
-                        sync = !sync
-                        onControlChange(com.opentonex.controller.ui.EffectControl.DELAY_SYNC, if (sync) 1f else 0f)
-                    },
-                    label = { Text("SYNC") }
+                TusbSegmentedRow(
+                    options = listOf("Normal", "Ping Pong"),
+                    selectedIndex = if (normalMode) 0 else 1,
+                    activeColor = ToneXGreen,
+                    modifier = Modifier.fillMaxWidth(),
+                    onSelect = { index ->
+                        normalMode = index == 0
+                        onControlChange(EffectControl.DELAY_PINGPONG, if (index == 0) 0f else 1f)
+                    }
                 )
             }
-        }
 
-        Button(onClick = onBack, colors = ButtonDefaults.buttonColors(), modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.effect_back_to_editor))
+            // Knobs verdes (acento do design para blocos de efeito)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                TusbKnob(
+                    label = labelA,
+                    value = knobA,
+                    valueText = String.format("%.1f", knobA * 10f),
+                    size = KnobSize.MEDIUM,
+                    accent = ToneXGreen,
+                    onValueChange = {
+                        knobA = it
+                        onControlChange(EffectControl.KNOB_A, it)
+                    }
+                )
+                TusbKnob(
+                    label = labelB,
+                    value = knobB,
+                    valueText = String.format("%.1f", knobB * 10f),
+                    size = KnobSize.MEDIUM,
+                    accent = ToneXGreen,
+                    onValueChange = {
+                        knobB = it
+                        onControlChange(EffectControl.KNOB_B, it)
+                    }
+                )
+                TusbKnob(
+                    label = labelC,
+                    value = knobC,
+                    valueText = String.format("%.1f", knobC * 10f),
+                    size = KnobSize.MEDIUM,
+                    accent = ToneXGreen,
+                    onValueChange = {
+                        knobC = it
+                        onControlChange(EffectControl.KNOB_C, it)
+                    }
+                )
+            }
+
+            // PRE/POST + SYNC
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                TusbSegmentedRow(
+                    options = listOf("Pre", "Post"),
+                    selectedIndex = if (postPosition) 1 else 0,
+                    activeColor = ToneXGreen,
+                    modifier = Modifier.weight(1f),
+                    onSelect = { index ->
+                        postPosition = index == 1
+                        onControlChange(EffectControl.POST, if (index == 1) 1f else 0f)
+                    }
+                )
+                if (effect == EffectSlotType.DLY) {
+                    Box(
+                        modifier = Modifier
+                            .weight(0.6f)
+                            .clickable {
+                                sync = !sync
+                                onControlChange(EffectControl.DELAY_SYNC, if (sync) 1f else 0f)
+                            }
+                            .background(
+                                color = if (sync) ToneXGreen else ToneXSurfaceHigh,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .padding(vertical = 13.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "SYNC",
+                            style = MonoLabelStyle.copy(fontSize = 13.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = if (sync) Color(0xFF111111) else ToneXOnSurfaceMuted
+                        )
+                    }
+                }
+            }
         }
     }
-}
-
-@Composable
-private fun EffectSliderRow(label: String, value: Float, onValueChange: (Float) -> Unit) {
-    Column {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(text = label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-            Text(text = "${(value * 100).toInt()}%", style = MaterialTheme.typography.labelMedium)
-        }
-        Slider(value = value, onValueChange = onValueChange)
     }
 }

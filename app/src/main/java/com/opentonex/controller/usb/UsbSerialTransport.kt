@@ -47,6 +47,10 @@ class UsbSerialTransport private constructor(
 
     private var port: UsbSerialPort? = null
     private var usbConnection: UsbDeviceConnection? = null
+
+    /** SN real do pedal (descritor USB, string index 0x12) — o mesmo que o app oficial exibe. */
+    override val deviceSerialNumber: String?
+        get() = runCatching { driver.device.serialNumber }.getOrNull()
     // Endpoint MIDI OUT (USB Audio class, subclass MIDISTREAMING). Null se o device
     // nao expoe interface MIDI — nesse caso writeDirect lanca IOException.
     private val midiInterface: UsbInterface?

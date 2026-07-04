@@ -245,6 +245,12 @@ object TonexMessages {
             }
         }
         if (current.isNotEmpty()) runs.add(current.toString())
+        // 1a escolha: padrao de versao semantica (ex.: "1.3.16"), como o app oficial exibe.
+        val semverRegex = Regex("""\d+\.\d+(\.\d+)?""")
+        val semver = runs.asSequence()
+            .mapNotNull { run -> semverRegex.find(run)?.value }
+            .maxByOrNull { it.length }
+        if (semver != null) return FirmwareInfo(version = semver)
         val version = runs
             .map { it.trim() }
             .filter { it.length >= 3 && it.any(Char::isDigit) }
@@ -326,13 +332,27 @@ object TonexMessages {
         return buildSlotChangePayload(rawState, slotOff, currentSlotByte, bypass)
     }
 
-    /** Monta o payload para alternar o modo global do ToneX One: A/B (0) ou Stomp (1). */
+    /**
+     * Monta o payload para alternar o modo global do ToneX One: A/B (0) ou Stomp (1).
+     * O slot ativo acompanha o modo (Stomp <=> slot C, como no firmware de referencia
+     * Builty, onde set_preset_in_slot amarra stomp_mode ao slot C): sem alinhar o slot,
+     * o pedal recebia stomp_mode=1 com slot A/B e ignorava a troca.
+     */
     fun buildSwitchModePayload(rawState: ByteArray, targetMode: PedalMode): ByteArray {
         require(rawState.size > STATE_RESPONSE_HEADER_LENGTH + STOMP_MODE_BODY_OFFSET) {
             "rawState curto demais para conter stomp_mode"
         }
         return rebuildStateCommand(rawState) { body ->
             body[STOMP_MODE_BODY_OFFSET] = if (targetMode == PedalMode.STOMP) 1 else 0
+            val slotOffset = body.size - CURRENT_SLOT_END_OFFSET
+            if (slotOffset in body.indices) {
+                val currentSlot = body[slotOffset].toInt() and 0xFF
+                body[slotOffset] = when {
+                    targetMode == PedalMode.STOMP -> slotToByte(Slot.C).toByte()
+                    currentSlot == slotToByte(Slot.C) -> slotToByte(Slot.A).toByte()
+                    else -> currentSlot.toByte()
+                }
+            }
         }
     }
 

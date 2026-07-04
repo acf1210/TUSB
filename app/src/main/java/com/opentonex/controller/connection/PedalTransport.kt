@@ -12,6 +12,9 @@ interface PedalTransport {
      * Usado para comandos que trafegam no endpoint MIDI em vez do endpoint CDC serial.
      */
     suspend fun writeDirect(bytes: ByteArray)
+
+    /** Numero de serie do dispositivo (descritor USB), quando disponivel. */
+    val deviceSerialNumber: String? get() = null
 }
 
 class PedalTransportTimeoutException(message: String) : Exception(message)

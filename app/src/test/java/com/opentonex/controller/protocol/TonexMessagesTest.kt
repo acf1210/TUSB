@@ -326,6 +326,8 @@ class TonexMessagesStateTest {
         val expectedBody = payload.copyOfRange(8, payload.size)
         expectedBody[19] = 1
         expectedBody[expectedBody.size - 7] = 1
+        // Stomp <=> slot C: o comando tambem alinha o slot ativo ao modo.
+        expectedBody[expectedBody.size - 11] = 2
         val expectedSuffix = byteArrayOf(
             0x82.toByte(),
             (expectedBody.size and 0xFF).toByte(),
@@ -335,6 +337,16 @@ class TonexMessagesStateTest {
             0x03
         )
         assertArrayEquals(payload.copyOfRange(0, 5) + expectedSuffix + expectedBody, updated)
+    }
+
+    @Test fun `buildSwitchModePayload back to AB leaves slot C moves to slot A`() {
+        val payload = syntheticStatePayload(activeSlotByte = 2)
+
+        val updated = TonexMessages.buildSwitchModePayload(payload, PedalMode.AB)
+
+        val body = updated.copyOfRange(updated.size - (payload.size - 8), updated.size)
+        assertEquals(0, body[19].toInt())
+        assertEquals(0, body[body.size - 11].toInt())
     }
 
     @Test fun `buildSetCabSimBypassPayload mutates cab sim bypass byte`() {

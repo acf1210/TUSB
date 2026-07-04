@@ -2,12 +2,16 @@ package com.opentonex.controller.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -19,8 +23,6 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
@@ -29,17 +31,24 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.opentonex.controller.ui.theme.ToneXBackground
+import com.opentonex.controller.ui.theme.ToneXDivider
+import com.opentonex.controller.ui.theme.ToneXOnSurface
+import com.opentonex.controller.ui.theme.ToneXOnSurfaceMuted
+import com.opentonex.controller.ui.theme.ToneXSurfaceHigh
 import androidx.annotation.StringRes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -65,6 +74,7 @@ import com.opentonex.controller.ui.editor.EditorScreen
 import com.opentonex.controller.ui.editor.EffectDetailScreen
 import com.opentonex.controller.ui.editor.EffectSlotType
 import com.opentonex.controller.ui.menu.MenuScreen
+import com.opentonex.controller.ui.presets.PresetCustomizationStore
 import com.opentonex.controller.ui.presets.PresetsScreen
 import com.opentonex.controller.ui.tools.ToolsScreen
 
@@ -104,12 +114,12 @@ private fun TopBrandBar(firmwareVersion: String? = null) {
             if (firmwareVersion != null) {
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "FW $firmwareVersion",
+                    text = firmwareVersion,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 180.dp)
+                    modifier = Modifier.widthIn(max = 260.dp)
                 )
             }
         }
@@ -133,10 +143,8 @@ fun ToneXApp(
     val effectChain by viewModel.effectChain.collectAsStateWithLifecycle()
     val menuState by viewModel.menu.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        viewModel.startCapture(onResolveCaptureDirectory())
-    }
-
+    // Captura de log NAO inicia automaticamente: fica parada por padrao e so'
+    // e' ligada manualmente pelo usuario na aba Menu.
     when (val current = connectionState) {
         ConnectionState.Disconnected -> ConnectScreen(
             statusMessage = busyState.busyReason ?: stringResource(R.string.status_waiting_usb),
@@ -147,7 +155,13 @@ fun ToneXApp(
         )
         is ConnectionState.Connected -> Box(modifier = Modifier.fillMaxSize()) {
             ConnectedApp(
-                firmwareVersion = current.firmware.version,
+                // Como o app oficial: "TONEX ONE, SN: ..., FW: ..." (SN do descritor USB).
+                // Zeros a esquerda do SN removidos para a linha caber inteira na barra.
+                firmwareVersion = listOfNotNull(
+                    current.firmware.serialNumber?.trimStart('0')?.takeIf { it.isNotEmpty() }
+                        ?.let { "SN $it" },
+                    "FW ${current.firmware.version}"
+                ).joinToString(" | "),
                 pedal = current.pedal,
                 isTablet = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact,
                 busyState = busyState,
@@ -245,17 +259,7 @@ private fun ConnectedApp(
         Scaffold(
             topBar = { TopBrandBar(firmwareVersion = firmwareVersion) },
             bottomBar = {
-                NavigationBar {
-                    destinations.forEach { destination ->
-                        val (isSelected, onClick) = rememberNavItem(navController, destination)
-                        NavigationBarItem(
-                            selected = isSelected,
-                            onClick = onClick,
-                            icon = { Icon(destination.icon(), contentDescription = stringResource(destination.labelRes)) },
-                            label = { Text(stringResource(destination.labelRes)) }
-                        )
-                    }
-                }
+                TusbBottomNav(navController = navController, destinations = destinations)
             }
         ) { padding ->
             ConnectedNavHost(
@@ -296,6 +300,15 @@ private fun ConnectedNavHost(
     midiController: MidiController? = null,
     modifier: Modifier = Modifier
 ) {
+    // Apelidos e nomes manuais de amp/cab por preset (persistencia local ao aparelho).
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val customizationStore = androidx.compose.runtime.remember { PresetCustomizationStore(context) }
+    var customizations by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(customizationStore.loadAll())
+    }
+    val activePresetId = pedal.presetIds.getOrNull(pedal.activeSlot.ordinal)
+    val activeCustom = activePresetId?.let { customizations[it] }
+
     NavHost(
         navController = navController,
         startDestination = TopLevelDestination.EDITOR.route,
@@ -310,6 +323,9 @@ private fun ConnectedNavHost(
                 ampKnobs = ampKnobs,
                 busyReason = busyState.busyReason,
                 effectChain = effectChain.enabled,
+                rigModels = pedal.rigModels(),
+                ampNameOverride = activeCustom?.ampName,
+                cabNameOverride = activeCustom?.cabName,
                 onAmpKnobChange = onAmpKnobChange,
                 onSelectEffect = { effect -> navController.navigate("effect/${effect.name}") },
                 onToggleEffect = onToggleEffect
@@ -338,6 +354,16 @@ private fun ConnectedNavHost(
                 presets = pedal.slots,
                 libraryPresets = pedal.libraryPresets,
                 isBusy = busyState.isBusy,
+                activeCabLabel = pedal.rigModels().let { rig ->
+                    if (rig.cabinetType == null && !pedal.cabSimBypass) null
+                    else rig.cabLabel(pedal.cabSimBypass)
+                },
+                activeAmpEnabled = pedal.rigModels().ampEnabled,
+                customizations = customizations,
+                onSaveCustomization = { index, customization ->
+                    customizationStore.save(index, customization)
+                    customizations = customizationStore.loadAll()
+                },
                 onSelectSlot = onSelectSlot,
                 onLoadPreset = onLoadPreset,
                 onSwitchMode = onSwitchMode,
@@ -364,6 +390,57 @@ private fun ConnectedNavHost(
                 onDisconnect = onDisconnect,
                 midiController = midiController
             )
+        }
+    }
+}
+
+/**
+ * Barra de navegacao inferior do design TUSB: fundo #1c1c1e com divisor superior,
+ * item ativo em branco com "pill" #3a3a3c atras do icone, labels uppercase pequenos.
+ */
+@Composable
+private fun TusbBottomNav(
+    navController: NavHostController,
+    destinations: List<TopLevelDestination>
+) {
+    Column(modifier = Modifier.fillMaxWidth().background(ToneXBackground)) {
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(ToneXDivider))
+        Row(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
+            destinations.forEach { destination ->
+                val (isSelected, onClick) = rememberNavItem(navController, destination)
+                val tint = if (isSelected) ToneXOnSurface else ToneXOnSurfaceMuted
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onClick)
+                        .padding(top = 8.dp, bottom = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                color = if (isSelected) ToneXSurfaceHigh else Color.Transparent,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 14.dp, vertical = 3.dp)
+                    ) {
+                        Icon(
+                            imageVector = destination.icon(),
+                            contentDescription = stringResource(destination.labelRes),
+                            tint = tint,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Text(
+                        text = stringResource(destination.labelRes).uppercase(),
+                        fontSize = 9.sp,
+                        letterSpacing = 0.4.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = tint
+                    )
+                }
+            }
         }
     }
 }

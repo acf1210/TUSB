@@ -108,6 +108,7 @@ class FakePedalConnection : PedalConnection {
 
     override suspend fun writeParameter(paramIndex: Int, value: Float) {
         parameters[paramIndex] = value
+        parameterWriteCounts[paramIndex] = (parameterWriteCounts[paramIndex] ?: 0) + 1
         events.tryEmit(
             PedalRuntimeEvent.ParameterChanged(
                 paramIndex = paramIndex,
@@ -120,6 +121,7 @@ class FakePedalConnection : PedalConnection {
 
     /** Ultimo valor escrito por indice de parametro (inspecionavel nos testes). */
     val parameters = mutableMapOf<Int, Float>()
+    val parameterWriteCounts = mutableMapOf<Int, Int>()
 
     override suspend fun disconnect() {
         events.tryEmit(PedalRuntimeEvent.Disconnected)

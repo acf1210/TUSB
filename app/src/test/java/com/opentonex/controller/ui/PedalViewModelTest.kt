@@ -87,6 +87,20 @@ class PedalViewModelTest {
         advanceUntilIdle()
 
         assertEquals(5.0f, fake.parameters[20] ?: Float.NaN, 0.0001f)
+        assertEquals(1, fake.parameterWriteCounts[20])
+    }
+
+    @Test fun `updateAmpKnob writes captured hardware volume parameter`() = runTest {
+        val fake = FakePedalConnection()
+        val viewModel = PedalViewModel()
+        viewModel.connectWith(fake)
+        advanceUntilIdle()
+
+        viewModel.updateAmpKnob(AmpKnob.VOLUME, 0.5f)
+        advanceUntilIdle()
+
+        assertEquals(-10.0f, fake.parameters[8] ?: Float.NaN, 0.0001f)
+        assertEquals(1, fake.parameterWriteCounts[8])
     }
 
     @Test fun `toggleEffectEnabled writes the enable parameter to the pedal`() = runTest {

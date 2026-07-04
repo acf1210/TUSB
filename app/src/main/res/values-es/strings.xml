@@ -10,6 +10,11 @@
     <string name="connect_instruction">Conexión inicial: pon el pedal en modo Stomp y presiona el pedal tres veces para conectar.</string>
     <string name="connect_real">Conectar pedal por USB-C</string>
     <string name="connect_fake">Usar pedal simulado</string>
+    <string name="connect_subtitle">ToneX One · Controller</string>
+    <string name="connect_step1">Modo Stomp en el ToneX One</string>
+    <string name="connect_step2">Pisa el pedal 3× para emparejar</string>
+    <string name="connect_step3">Cable USB-C OTG en el Android</string>
+    <string name="connect_footer">Android 7.0+ · OTG requerido</string>
     <string name="ios_notice_title">Versión para iOS en desarrollo</string>
     <string name="ios_notice_body">Próximamente.</string>
     <string name="metronome_title">Metrónomo</string>
@@ -67,6 +72,13 @@
     <string name="presets_count">20 presets</string>
     <string name="presets_load_active_slot">carga en el slot activo</string>
     <string name="presets_active">activo</string>
+    <string name="presets_search">Buscar</string>
+    <string name="preset_edit_name">Nombre del preset</string>
+    <string name="preset_edit_amp">Modelo de amp</string>
+    <string name="preset_edit_cab">Modelo de cab</string>
+    <string name="preset_edit_hint">Se guarda solo en este dispositivo — el pedal no almacena estos nombres.</string>
+    <string name="preset_edit_save">Guardar</string>
+    <string name="preset_edit_cancel">Cancelar</string>
     <string name="editor_effect_chain">Cadena de efectos</string>
     <string name="editor_effect_hint">Toca el LED para activar/desactivar el bloque en el pedal. Toca la tarjeta para ajustar parámetros.</string>
     <string name="effect_back">Volver</string>

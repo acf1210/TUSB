@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-1.0.2-brightgreen" />
+  <img alt="version" src="https://img.shields.io/badge/version-1.0.3-brightgreen" />
   <img alt="platform" src="https://img.shields.io/badge/platform-Android%207.0%2B-3DDC84" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue" />
   <img alt="status" src="https://img.shields.io/badge/status-community-orange" />
@@ -74,6 +74,13 @@
 
 ## 🇧🇷 Português Brasil
 
+### Destaques da V1.0.3
+
+- Editor TUSB redesenhado com knobs pretos 3D, fundo escuro texturizado e cadeia de efeitos visual.
+- Controles reais de amp/efeitos validados no ToneX One: Gain, EQ, Volume, toggles e detalhes de efeito via `0x0309`.
+- Volume do Editor ajustado para o parametro capturado no hardware (`paramIndex=8`) e serial/FW completos na barra superior.
+- Presets com personalizacao local de amp/cab e telas Connect, Editor, Presets e Detalhe alinhadas ao novo visual.
+
 ### Destaques da V1.0.2
 
 - Suporte a footswitches MIDI por Bluetooth LE (M-Vave Chocolate e similares) e USB MIDI
@@ -132,6 +139,13 @@ O APK debug fica em `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 🇺🇸 English US
 
+### V1.0.3 highlights
+
+- TUSB editor redesign with black 3D knobs, darker textured background, and visual effect chain.
+- Real ToneX One amp/effect controls validated on hardware: Gain, EQ, Volume, toggles, and effect details over `0x0309`.
+- Editor Volume mapped to the hardware-captured parameter (`paramIndex=8`) and full serial/FW display in the top bar.
+- Local amp/cab preset customization and Connect, Editor, Presets, and Effect Detail screens aligned with the new look.
+
 ### V1.0.2 highlights
 
 - MIDI footswitch support over Bluetooth LE (M-Vave Chocolate and similar) and USB MIDI
@@ -189,6 +203,13 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 ---
 
 ## 🇪🇸 Español
+
+### Novedades de la V1.0.3
+
+- Editor TUSB redisenado con knobs negros 3D, fondo oscuro texturizado y cadena visual de efectos.
+- Controles reales de amp/efectos validados en ToneX One: Gain, EQ, Volume, toggles y detalle de efectos via `0x0309`.
+- Volume del Editor ajustado al parametro capturado en hardware (`paramIndex=8`) y serial/FW completos en la barra superior.
+- Personalizacion local de amp/cab por preset y pantallas Connect, Editor, Presets y Detalle de Efecto alineadas al nuevo visual.
 
 ### Novedades de la V1.0.2
 

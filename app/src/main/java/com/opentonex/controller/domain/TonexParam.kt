@@ -18,11 +18,17 @@ enum class TonexParam(
 ) {
     NOISE_GATE_ENABLE(1, 0f, 1f, "ParameterXNoiseGateEnable"),
     COMP_ENABLE(6, 0f, 1f, "ParameterXCompEnable"),
+    COMP_MAKE_UP(8, -30f, 10f, "ParameterXCompMakeUp"),
     EQ_BASS(11, 0f, 10f, "ParameterXEqBass"),
     EQ_MID(13, 0f, 10f, "ParameterXEqMid"),
     EQ_TREBLE(16, 0f, 10f, "ParameterXEqTreble"),
+    MODEL_AMP_ENABLE(18, 0f, 1f, "ParameterXModelAmpEnable"),
     MODEL_GAIN(20, 0f, 10f, "ParameterXModelGain"),
     MODEL_VOLUME(21, 0f, 10f, "ParameterXModelVolume"),
+    /** SELECT: 0=cab do Tone Model, 1=VIR, 2=desativado (Builty TONEX_PARAM_CABINET_TYPE). */
+    CABINET_TYPE(24, 0f, 2f, "ParameterXCabinetType"),
+    /** SELECT 0..10: modelo de gabinete VIR (nomes so existem no app oficial). */
+    VIR_CABINET_MODEL(25, 0f, 10f, "ParameterXVirCabinetModel"),
     REVERB_ENABLE(37, 0f, 1f, "ParameterXReverbEnable"),
     REVERB_MODEL(38, 0f, 5f, "ParameterXReverbModel"),
     MODULATION_ENABLE(64, 0f, 1f, "ParameterXModulationEnable"),

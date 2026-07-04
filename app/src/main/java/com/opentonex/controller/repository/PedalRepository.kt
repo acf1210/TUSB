@@ -80,7 +80,10 @@ class PedalRepository(
 
     suspend fun loadPresetToActiveSlot(presetId: Int) = operationMutex.withLock {
         val current = _state.value as? ConnectionState.Connected ?: return
-        val slot = current.pedal.activeSlot
+        // No modo Stomp o ToneX One trabalha sempre com o slot C (firmware de referencia
+        // Builty: stomp_mode=1 <=> slot C). Carregar no slot A/B enquanto em Stomp fazia o
+        // comando forcar stomp_mode=0, e o pedal saia do Stomp sem vincular o preset.
+        val slot = if (current.pedal.pedalMode == PedalMode.STOMP) Slot.C else current.pedal.activeSlot
         recordLocalAction("load_preset_to_slot", mapOf("presetId" to presetId, "slot" to slot.name))
         val updatedPedal = current.pedal.withPresetInSlot(presetId, slot, selectSlot = true)
         lastConfirmedActiveSlot = slot
@@ -116,7 +119,17 @@ class PedalRepository(
         val current = _state.value as? ConnectionState.Connected ?: return
         recordLocalAction("switch_mode", mapOf("target" to targetMode.name))
         connection.switchMode(current.pedal, targetMode)
-        _state.value = current.copy(pedal = current.pedal.withPedalMode(targetMode))
+        // Stomp <=> slot C: alinha o slot local ao que o comando gravou no pedal, senao o
+        // reconcilePedal (override de slot) regravava o slot antigo e desfazia o modo.
+        val newSlot = when {
+            targetMode == PedalMode.STOMP -> Slot.C
+            current.pedal.activeSlot == Slot.C -> Slot.A
+            else -> current.pedal.activeSlot
+        }
+        lastConfirmedActiveSlot = newSlot
+        _state.value = current.copy(
+            pedal = current.pedal.withPedalMode(targetMode).withActiveSlot(newSlot)
+        )
     }
 
     /** Escreve [value] (valor REAL, ex.: gain 0..10) no parametro [param] do preset ativo. */
@@ -211,6 +224,14 @@ class PedalRepository(
                 _state.value = current.copy(pedal = reconcilePedal(event.state))
             }
             is PedalRuntimeEvent.ParameterChanged -> {
+                // Espelha o knob fisico no estado local: sem isto o proximo re-sync
+                // publicava os parametros antigos e o knob virtual voltava sozinho.
+                val current = _state.value as? ConnectionState.Connected
+                if (current != null) {
+                    _state.value = current.copy(
+                        pedal = current.pedal.withParameterValue(event.paramIndex, event.value)
+                    )
+                }
                 _parameterChanges.tryEmit(event)
             }
             PedalRuntimeEvent.Disconnected -> {

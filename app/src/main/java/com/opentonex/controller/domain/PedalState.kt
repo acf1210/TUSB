@@ -30,6 +30,30 @@ data class LibraryPreset(
     val color: Rgb
 )
 
+/** Tipo de cabinet do preset ativo (tonex_params indice 24). */
+enum class CabinetType { TONE_MODEL, VIR, DISABLED }
+
+/**
+ * Modelos de amp/cab em uso no preset ATIVO, derivados do bloco de parametros 0x0304.
+ * O "amp" do ToneX One e' o proprio Tone Model (capture) do preset; o cab pode ser o
+ * do capture (Tone Model), um gabinete VIR (indice do modelo) ou estar desativado.
+ * Campos nulos enquanto o pedal nao envia o detalhe do preset.
+ */
+data class RigModels(
+    val ampEnabled: Boolean?,
+    val cabinetType: CabinetType?,
+    val virCabinetModel: Int?
+) {
+    /** Rotulo curto do cab para a UI (ex.: "TONE MODEL", "VIR 4", "OFF"). */
+    fun cabLabel(cabSimBypass: Boolean): String = when {
+        cabSimBypass -> "OFF"
+        cabinetType == CabinetType.TONE_MODEL -> "TONE MODEL"
+        cabinetType == CabinetType.VIR -> "VIR ${(virCabinetModel ?: 0) + 1}"
+        cabinetType == CabinetType.DISABLED -> "OFF"
+        else -> "—"
+    }
+}
+
 data class PedalState(
     val activeSlot: Slot,
     val inputTrim: Float,
@@ -174,6 +198,15 @@ data class PedalState(
     /** Valor real do parametro [param] no preset ativo, ou null se ainda nao recebido. */
     fun parameterValue(param: TonexParam): Float? = presetParameters.getOrNull(param.index)
 
+    /** Modelos de amp/cab do preset ativo, derivados do detalhe 0x0304 (ver [RigModels]). */
+    fun rigModels(): RigModels = RigModels(
+        ampEnabled = parameterValue(TonexParam.MODEL_AMP_ENABLE)?.let { it >= 0.5f },
+        cabinetType = parameterValue(TonexParam.CABINET_TYPE)?.let { raw ->
+            CabinetType.entries.getOrNull(raw.toInt().coerceIn(0, 2))
+        },
+        virCabinetModel = parameterValue(TonexParam.VIR_CABINET_MODEL)?.toInt()
+    )
+
     /**
      * Write-through local de um parametro escrito no pedal via 0x0309: o pedal NAO reenvia
      * o detalhe 0x0304 apos a escrita, entao sem atualizar a copia local o proximo re-sync
@@ -238,4 +271,4 @@ data class PedalState(
     }
 }
 
-data class FirmwareInfo(val version: String)
+data class FirmwareInfo(val version: String, val serialNumber: String? = null)

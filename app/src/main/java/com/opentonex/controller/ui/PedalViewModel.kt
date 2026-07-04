@@ -2,6 +2,7 @@ package com.opentonex.controller.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.util.Log
 import com.opentonex.controller.capture.EventCaptureRecorder
 import com.opentonex.controller.connection.PedalConnection
 import com.opentonex.controller.domain.PedalMode
@@ -110,7 +111,7 @@ enum class AmpKnob(val label: String) {
         MID -> listOf("ParameterXEqMid", "EqMid", "mid")
         TREBLE -> listOf("ParameterXEqTreble", "EqTreble", "treble")
         GAIN -> listOf("ParameterXModelGain", "ModelGain", "gain")
-        VOLUME -> listOf("ParameterXModelVolume", "ModelVolume", "volume")
+        VOLUME -> listOf("ParameterXCompMakeUp", "ParameterXModelVolume", "ModelVolume", "volume")
     }
 
     /** Parametro real do ToneX One (indice tonex_params + range) que este knob controla. */
@@ -119,7 +120,9 @@ enum class AmpKnob(val label: String) {
         MID -> TonexParam.EQ_MID
         TREBLE -> TonexParam.EQ_TREBLE
         GAIN -> TonexParam.MODEL_GAIN
-        VOLUME -> TonexParam.MODEL_VOLUME
+        // ponytail: o volume movido no hardware desta bancada chegou como param 8.
+        // Voltar para MODEL_VOLUME se uma captura real mostrar param 21 respondendo.
+        VOLUME -> TonexParam.COMP_MAKE_UP
     }
 
     companion object {
@@ -154,9 +157,10 @@ data class AmpKnobUiState(
         }
     }
 
-    fun withPedalParameters(pedal: PedalState): AmpKnobUiState {
+    fun withPedalParameters(pedal: PedalState, skip: Set<AmpKnob> = emptySet()): AmpKnobUiState {
         val activePreset = pedal.slots.getOrNull(pedal.activeSlot.ordinal) ?: return this
         return AmpKnob.entries.fold(this) { state, knob ->
+            if (knob in skip) return@fold state
             val parameter = knob.parameterIds()
                 .asSequence()
                 .mapNotNull(activePreset.parameters::get)
@@ -486,7 +490,12 @@ class PedalViewModel : ViewModel() {
         }
     }
 
+    /** Momento da ultima edicao LOCAL de cada knob (para suprimir eco 0x0309 do pedal). */
+    private val knobLocalEditAt = mutableMapOf<AmpKnob, Long>()
+
     fun updateAmpKnob(knob: AmpKnob, value: Float) {
+        Log.d("ToneXUi", "updateAmpKnob knob=$knob value=$value")
+        knobLocalEditAt[knob] = System.currentTimeMillis()
         _ampKnobs.value = _ampKnobs.value.withValue(knob, value)
         scheduleKnobWrite(knob, value)
     }
@@ -500,7 +509,11 @@ class PedalViewModel : ViewModel() {
 
     private fun scheduleKnobWrite(knob: AmpKnob, normalized: Float) {
         val param = knob.toParam()
-        scheduleBindingWrite(knob, TonexParamBinding(param.index, param.min, param.max), param.denormalize(normalized))
+        scheduleBindingWrite(
+            knob,
+            TonexParamBinding(param.index, param.min, param.max),
+            param.denormalize(normalized)
+        )
     }
 
     /** Escrita com debounce de um valor REAL em um indice da tabela tonex_params. */
@@ -584,6 +597,12 @@ class PedalViewModel : ViewModel() {
         parameterChangesJob = viewModelScope.launch {
             repo.parameterChanges.collect { change ->
                 val knob = AmpKnob.fromParamIndex(change.paramIndex) ?: return@collect
+                // Janela de supressao: o knob fisico unico do ToneX One (volume, indice 21)
+                // reporta a posicao do potenciometro logo apos as nossas escritas; aplicar
+                // essas notificacoes durante o arrasto travava o knob virtual de VOLUME
+                // (snap-back imediato). Enquanto o usuario interage, o valor local vence.
+                val lastLocal = knobLocalEditAt[knob] ?: 0L
+                if (System.currentTimeMillis() - lastLocal < KNOB_ECHO_SUPPRESS_MS) return@collect
                 _ampKnobs.value =
                     _ampKnobs.value.withValue(knob, knob.toParam().normalize(change.value))
             }
@@ -603,7 +622,13 @@ class PedalViewModel : ViewModel() {
     private fun publishRepositoryState(state: ConnectionState) {
         _state.value = state
         val connected = state as? ConnectionState.Connected ?: return
-        _ampKnobs.value = _ampKnobs.value.withPedalParameters(connected.pedal)
+        // Knobs editados ha pouco mantem o valor local: o eco do potenciometro fisico
+        // (volume) chega pelo estado do repositorio e travava o knob virtual no poll.
+        val now = System.currentTimeMillis()
+        val recentlyEdited = AmpKnob.entries.filterTo(mutableSetOf()) { knob ->
+            now - (knobLocalEditAt[knob] ?: 0L) < KNOB_ECHO_SUPPRESS_MS
+        }
+        _ampKnobs.value = _ampKnobs.value.withPedalParameters(connected.pedal, skip = recentlyEdited)
         _effectChain.value = _effectChain.value.withPedalParameters(connected.pedal)
     }
 
@@ -629,5 +654,7 @@ class PedalViewModel : ViewModel() {
     private companion object {
         const val PEDAL_POLL_INTERVAL_MS = 900L
         const val KNOB_WRITE_DEBOUNCE_MS = 60L
+        /** Ignora ecos 0x0309 do pedal por este intervalo apos uma edicao local do knob. */
+        const val KNOB_ECHO_SUPPRESS_MS = 1500L
     }
 }

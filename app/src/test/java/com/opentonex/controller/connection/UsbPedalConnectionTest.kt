@@ -274,6 +274,30 @@ class UsbPedalConnectionTest {
         assertEquals(8.2f, change.value, 0.0001f)
     }
 
+    @Test fun `local parameter write suppresses immediate physical echo`() = runTest {
+        val transport = FakePedalTransport()
+        val connection = UsbPedalConnection(transport)
+        val events = mutableListOf<PedalRuntimeEvent>()
+        val collector = launch {
+            connection.runtimeEvents.collect { events.add(it) }
+        }
+        kotlinx.coroutines.yield()
+
+        connection.writeParameter(paramIndex = 21, value = 5.0f)
+        transport.nextFrame = HdlcCodec.encode(
+            byteArrayOf(
+                0xB9.toByte(), 0x03, 0x81.toByte(), 0x09, 0x03, 0x0A, 0x02,
+                0xB9.toByte(), 0x04, 0x02, 0x00, 0x15, 0x88.toByte(), 0x33, 0x33, 0x03, 0x41
+            )
+        )
+
+        connection.readPassiveState()
+        kotlinx.coroutines.yield()
+        collector.cancel()
+
+        assertTrue(events.filterIsInstance<PedalRuntimeEvent.ParameterChanged>().isEmpty())
+    }
+
     @Test fun `disconnect closes the transport`() = runTest {
         val transport = FakePedalTransport()
         val connection = UsbPedalConnection(transport)
