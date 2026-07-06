@@ -255,6 +255,10 @@ data class PedalState(
             slots == other.slots &&
             libraryPresets == other.libraryPresets &&
             presetIds == other.presetIds &&
+            pedalMode == other.pedalMode &&
+            cabSimBypass == other.cabSimBypass &&
+            bypassMode == other.bypassMode &&
+            presetParameters == other.presetParameters &&
             rawState.contentEquals(other.rawState)
     }
 
@@ -266,6 +270,10 @@ data class PedalState(
         result = 31 * result + slots.hashCode()
         result = 31 * result + libraryPresets.hashCode()
         result = 31 * result + presetIds.hashCode()
+        result = 31 * result + pedalMode.hashCode()
+        result = 31 * result + cabSimBypass.hashCode()
+        result = 31 * result + bypassMode.hashCode()
+        result = 31 * result + presetParameters.hashCode()
         result = 31 * result + rawState.contentHashCode()
         return result
     }

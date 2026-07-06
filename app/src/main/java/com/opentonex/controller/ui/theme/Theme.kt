@@ -11,6 +11,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.opentonex.controller.R
 
+enum class TusbTheme(val label: String) {
+    CLASSIC("Classic"),
+    STAGE("Stage"),
+    OCEAN("Ocean")
+}
+
 /**
  * O design TUSB usa DM Sans + DM Mono. Como as fontes nao estao empacotadas no app,
  * usamos Roboto (ja bundled) como sans e a monoespacada do sistema como mono; a troca
@@ -52,25 +58,55 @@ private val ToneXTypography = Typography().let { base ->
     )
 }
 
-private val ToneXDarkColorScheme = darkColorScheme(
-    primary = ToneXAccent,
-    onPrimary = ToneXBackground,
-    secondary = ToneXGreen,
-    onSecondary = ToneXBackground,
-    background = ToneXBackground,
-    onBackground = ToneXOnSurface,
-    surface = ToneXSurface,
-    onSurface = ToneXOnSurface,
-    surfaceVariant = ToneXSurfaceVariant,
-    onSurfaceVariant = ToneXOnSurfaceMuted,
-    outline = ToneXDivider,
-    error = ToneXError
-)
+private fun colorScheme(theme: TusbTheme) = when (theme) {
+    TusbTheme.CLASSIC -> darkColorScheme(
+        primary = ToneXAccent,
+        onPrimary = ToneXBackground,
+        secondary = ToneXGreen,
+        onSecondary = ToneXBackground,
+        background = ToneXBackground,
+        onBackground = ToneXOnSurface,
+        surface = ToneXSurface,
+        onSurface = ToneXOnSurface,
+        surfaceVariant = ToneXSurfaceVariant,
+        onSurfaceVariant = ToneXOnSurfaceMuted,
+        outline = ToneXDivider,
+        error = ToneXError
+    )
+    TusbTheme.STAGE -> darkColorScheme(
+        primary = StageAccent,
+        onPrimary = ToneXBackground,
+        secondary = StageSecondary,
+        onSecondary = ToneXBackground,
+        background = StageBackground,
+        onBackground = ToneXOnSurface,
+        surface = StageSurface,
+        onSurface = ToneXOnSurface,
+        surfaceVariant = StageSurfaceVariant,
+        onSurfaceVariant = ToneXOnSurfaceMuted,
+        outline = ToneXDivider,
+        error = ToneXError
+    )
+    TusbTheme.OCEAN -> darkColorScheme(
+        primary = OceanAccent,
+        onPrimary = ToneXBackground,
+        secondary = OceanSecondary,
+        onSecondary = ToneXBackground,
+        background = OceanBackground,
+        onBackground = ToneXOnSurface,
+        surface = OceanSurface,
+        onSurface = ToneXOnSurface,
+        surfaceVariant = OceanSurfaceVariant,
+        onSurfaceVariant = ToneXOnSurfaceMuted,
+        outline = ToneXDivider,
+        error = ToneXError
+    )
+}
 
 @Composable
-fun ToneXTheme(content: @Composable () -> Unit) {
+fun ToneXTheme(theme: TusbTheme = TusbTheme.CLASSIC, content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = ToneXDarkColorScheme,
+        colorScheme = colorScheme(theme),
         typography = ToneXTypography,
         content = content
     )

@@ -47,6 +47,7 @@ import com.opentonex.controller.domain.RigModels
 import com.opentonex.controller.domain.Slot
 import com.opentonex.controller.ui.AmpKnob
 import com.opentonex.controller.ui.AmpKnobUiState
+import com.opentonex.controller.ui.EffectChainUiState
 import com.opentonex.controller.ui.components.KnobSize
 import com.opentonex.controller.ui.components.TusbKnob
 import com.opentonex.controller.ui.components.tusbBackground
@@ -88,7 +89,7 @@ fun EditorScreen(
     cabSimBypass: Boolean,
     ampKnobs: AmpKnobUiState,
     busyReason: String?,
-    effectChain: Map<EffectSlotType, Boolean>,
+    effectChain: EffectChainUiState,
     rigModels: RigModels = RigModels(null, null, null),
     /** Nomes manuais de amp/cab do preset ativo (personalizacao local); null = derivado. */
     ampNameOverride: String? = null,
@@ -203,15 +204,16 @@ private fun TitleRow(activeSlot: Slot, presetName: String?, bypassMode: Boolean)
  */
 @Composable
 private fun SignalChainCarousel(
-    effectChain: Map<EffectSlotType, Boolean>,
+    effectChain: EffectChainUiState,
     ampEnabled: Boolean?,
     cabLabel: String,
     accent: Color,
     onSelectEffect: (EffectSlotType) -> Unit,
     onToggleEffect: (EffectSlotType) -> Unit
 ) {
-    val preAmp = listOf(EffectSlotType.GATE, EffectSlotType.CMP, EffectSlotType.EQ)
-    val postAmp = listOf(EffectSlotType.MOD, EffectSlotType.DLY, EffectSlotType.REV, EffectSlotType.CAB)
+    val movable = EffectSlotType.entries.filter { it != EffectSlotType.CAB }
+    val preAmp = movable.filterNot(effectChain::isPost)
+    val postAmp = movable.filter(effectChain::isPost) + EffectSlotType.CAB
     Box(modifier = Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) {
         Box(
             modifier = Modifier
@@ -228,7 +230,7 @@ private fun SignalChainCarousel(
             items(preAmp) { effect ->
                 PedalCard(
                     effect = effect,
-                    enabled = effectChain[effect] ?: true,
+                    enabled = effectChain.isEnabled(effect),
                     onClick = { onSelectEffect(effect) },
                     onToggle = { onToggleEffect(effect) }
                 )
@@ -237,7 +239,7 @@ private fun SignalChainCarousel(
             items(postAmp) { effect ->
                 PedalCard(
                     effect = effect,
-                    enabled = effectChain[effect] ?: true,
+                    enabled = effectChain.isEnabled(effect),
                     labelOverride = if (effect == EffectSlotType.CAB) "CAB · $cabLabel" else null,
                     onClick = { onSelectEffect(effect) },
                     onToggle = { onToggleEffect(effect) }

@@ -14,6 +14,7 @@ import com.opentonex.controller.domain.TonexParamBinding
 import com.opentonex.controller.repository.ConnectionState
 import com.opentonex.controller.repository.PedalRepository
 import com.opentonex.controller.ui.editor.EffectSlotType
+import com.opentonex.controller.ui.theme.TusbTheme
 import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.Job
@@ -39,12 +40,24 @@ data class UiBusyState(
  * efeitos. Existe pra sobreviver a navegacao entre a esteira e a tela de detalhe do efeito.
  */
 data class EffectChainUiState(
-    val enabled: Map<EffectSlotType, Boolean> = EffectSlotType.entries.associateWith { true }
+    val enabled: Map<EffectSlotType, Boolean> = EffectSlotType.entries.associateWith { true },
+    val post: Map<EffectSlotType, Boolean> = mapOf(
+        EffectSlotType.GATE to false,
+        EffectSlotType.CMP to false,
+        EffectSlotType.EQ to false,
+        EffectSlotType.MOD to true,
+        EffectSlotType.DLY to true,
+        EffectSlotType.REV to true
+    )
 ) {
     fun isEnabled(effect: EffectSlotType): Boolean = enabled[effect] ?: true
+    fun isPost(effect: EffectSlotType): Boolean = post[effect] ?: true
 
     fun withToggled(effect: EffectSlotType): EffectChainUiState =
         copy(enabled = enabled + (effect to !isEnabled(effect)))
+
+    fun withPosition(effect: EffectSlotType, isPost: Boolean): EffectChainUiState =
+        copy(post = post + (effect to isPost))
 
     /**
      * Sincroniza os toggles com o estado REAL do pedal: enables lidos do bloco de
@@ -55,14 +68,18 @@ data class EffectChainUiState(
         if (pedal.presetParameters.isEmpty()) {
             return copy(enabled = enabled + (EffectSlotType.CAB to !pedal.cabSimBypass))
         }
-        val updated = enabled.toMutableMap()
+        val updatedEnabled = enabled.toMutableMap()
+        val updatedPost = post.toMutableMap()
         EffectSlotType.entries.forEach { effect ->
             effect.enableParam()?.let { param ->
-                pedal.parameterValue(param)?.let { updated[effect] = it >= 0.5f }
+                pedal.parameterValue(param)?.let { updatedEnabled[effect] = it >= 0.5f }
+            }
+            effect.postBinding()?.let { binding ->
+                pedal.presetParameters.getOrNull(binding.index)?.let { updatedPost[effect] = it >= 0.5f }
             }
         }
-        updated[EffectSlotType.CAB] = !pedal.cabSimBypass
-        return copy(enabled = updated)
+        updatedEnabled[EffectSlotType.CAB] = !pedal.cabSimBypass
+        return copy(enabled = updatedEnabled, post = updatedPost)
     }
 }
 
@@ -76,14 +93,25 @@ fun EffectSlotType.enableParam(): TonexParam? = when (this) {
     EffectSlotType.CAB, EffectSlotType.EQ -> null
 }
 
+fun EffectSlotType.postBinding(): TonexParamBinding? = when (this) {
+    EffectSlotType.GATE -> TonexEffectParams.GATE_POST
+    EffectSlotType.CMP -> TonexEffectParams.COMP_POST
+    EffectSlotType.EQ -> TonexEffectParams.EQ_POST
+    EffectSlotType.MOD -> TonexEffectParams.MODULATION_POST
+    EffectSlotType.DLY -> TonexEffectParams.DELAY_POST
+    EffectSlotType.REV -> TonexEffectParams.REVERB_POSITION
+    EffectSlotType.CAB -> null
+}
+
 /** Controles da tela de detalhe de efeito que escrevem no pedal. */
-enum class EffectControl { KNOB_A, KNOB_B, KNOB_C, POST, DELAY_SYNC, DELAY_PINGPONG }
+enum class EffectControl { KNOB_A, KNOB_B, KNOB_C, POST, DELAY_SYNC, DELAY_PINGPONG, CABINET_TYPE }
 
 /** Valores iniciais da tela de detalhe, derivados do bloco de parametros do preset ativo. */
 data class EffectDetailUiState(
     val knobA: Float = 0.35f,
     val knobB: Float = 0.20f,
     val knobC: Float = 0.50f,
+    val cabinetType: Int? = null,
     val post: Boolean = true,
     val delaySync: Boolean = false,
     val delayPingPong: Boolean = false
@@ -96,7 +124,8 @@ data class EffectDetailUiState(
  */
 data class MenuUiState(
     val masterVolume: Float = 0.75f,
-    val a4ReferenceOverride: Int = 440
+    val a4ReferenceOverride: Int = 440,
+    val theme: TusbTheme = TusbTheme.CLASSIC
 )
 
 enum class AmpKnob(val label: String) {
@@ -229,6 +258,7 @@ class PedalViewModel : ViewModel() {
             knobA = valueOf(a, 0.35f),
             knobB = valueOf(b, 0.20f),
             knobC = valueOf(c, 0.50f),
+            cabinetType = pedal.parameterValue(TonexParam.CABINET_TYPE)?.toInt()?.coerceIn(0, 2),
             post = postBinding?.let { bind -> (params.getOrNull(bind.index) ?: 1f) >= 0.5f } ?: true,
             delaySync = (params.getOrNull(TonexEffectParams.delaySync(delayModel).index) ?: 0f) >= 0.5f,
             delayPingPong = (params.getOrNull(TonexEffectParams.delayMode(delayModel).index) ?: 0f) >= 0.5f
@@ -241,6 +271,14 @@ class PedalViewModel : ViewModel() {
      */
     fun updateEffectControl(effect: EffectSlotType, control: EffectControl, value: Float) {
         val pedal = (state.value as? ConnectionState.Connected)?.pedal ?: return
+        if (effect == EffectSlotType.CAB && control == EffectControl.CABINET_TYPE) {
+            val repo = repository ?: return
+            viewModelScope.launch {
+                runCatching { repo.writeParameter(TonexParam.CABINET_TYPE, value.coerceIn(0f, 2f)) }
+                    .onSuccess { publishRepositoryState(repo.state.value) }
+            }
+            return
+        }
         val binding = when (control) {
             EffectControl.KNOB_A -> effectKnobBindings(effect, pedal).first
             EffectControl.KNOB_B -> effectKnobBindings(effect, pedal).second
@@ -248,11 +286,15 @@ class PedalViewModel : ViewModel() {
             EffectControl.POST -> effect.postBinding()
             EffectControl.DELAY_SYNC -> TonexEffectParams.delaySync(pedal.delayModel())
             EffectControl.DELAY_PINGPONG -> TonexEffectParams.delayMode(pedal.delayModel())
+            EffectControl.CABINET_TYPE -> null
         } ?: return
         when (control) {
             EffectControl.KNOB_A, EffectControl.KNOB_B, EffectControl.KNOB_C ->
                 scheduleBindingWrite(effect to control, binding, binding.denormalize(value))
             else -> {
+                if (control == EffectControl.POST) {
+                    _effectChain.value = _effectChain.value.withPosition(effect, value >= 0.5f)
+                }
                 val repo = repository ?: return
                 viewModelScope.launch {
                     runCatching { repo.writeParameterIndex(binding.index, value.coerceIn(0f, 1f)) }
@@ -308,16 +350,6 @@ class PedalViewModel : ViewModel() {
         )
     }
 
-    private fun EffectSlotType.postBinding(): TonexParamBinding? = when (this) {
-        EffectSlotType.GATE -> TonexEffectParams.GATE_POST
-        EffectSlotType.CMP -> TonexEffectParams.COMP_POST
-        EffectSlotType.EQ -> TonexEffectParams.EQ_POST
-        EffectSlotType.MOD -> TonexEffectParams.MODULATION_POST
-        EffectSlotType.DLY -> TonexEffectParams.DELAY_POST
-        EffectSlotType.REV -> TonexEffectParams.REVERB_POSITION
-        EffectSlotType.CAB -> null
-    }
-
     private fun PedalState.reverbModel(): Int =
         parameterValue(TonexParam.REVERB_MODEL)?.toInt() ?: 0
 
@@ -336,6 +368,10 @@ class PedalViewModel : ViewModel() {
 
     fun updateA4Reference(value: Int) {
         _menu.value = _menu.value.copy(a4ReferenceOverride = value.coerceIn(430, 450))
+    }
+
+    fun updateTheme(theme: TusbTheme) {
+        _menu.value = _menu.value.copy(theme = theme)
     }
 
     fun connectWith(connection: PedalConnection) {

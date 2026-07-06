@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-1.0.3-brightgreen" />
+  <img alt="version" src="https://img.shields.io/badge/version-1.0.4-brightgreen" />
   <img alt="platform" src="https://img.shields.io/badge/platform-Android%207.0%2B-3DDC84" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue" />
   <img alt="status" src="https://img.shields.io/badge/status-community-orange" />
@@ -25,38 +25,38 @@
 
 ---
 
-## 📦 APK V1.0.3 / VirusTotal
+## 📦 APK V1.0.4 / VirusTotal
 
 ### 🇧🇷 Português Brasil
 
 **Baixe o APK oficial da release:**
-👉 [TUSB-v1.0.3.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.3/TUSB-v1.0.3.apk)
+👉 [TUSB-v1.0.4.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.4/TUSB-v1.0.4.apk)
 
-**Verificação VirusTotal:** `0 malicioso`, `0 suspeito`, `67 não detectado`, `6 não suportado`
-**SHA-256:** `4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E`
-**Relatório:** [VirusTotal](https://www.virustotal.com/gui/file/4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.3/VIRUSTOTAL.md)
+**Verificação VirusTotal:** publicada automaticamente na release pelo workflow.
+**SHA-256:** publicado nas notas da release.
+**Relatório:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
 
 **Regra para novas versões:** toda nova release com APK deve atualizar o VirusTotal automaticamente via [release automation](docs/RELEASE_AUTOMATION.md).
 
 ### 🇺🇸 English US
 
 **Download the official release APK:**
-👉 [TUSB-v1.0.3.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.3/TUSB-v1.0.3.apk)
+👉 [TUSB-v1.0.4.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.4/TUSB-v1.0.4.apk)
 
-**VirusTotal scan:** `0 malicious`, `0 suspicious`, `67 undetected`, `6 unsupported`
-**SHA-256:** `4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E`
-**Report:** [VirusTotal](https://www.virustotal.com/gui/file/4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.3/VIRUSTOTAL.md)
+**VirusTotal scan:** published automatically on the release by the workflow.
+**SHA-256:** published in the release notes.
+**Report:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
 
 **Rule for new versions:** every new release with an APK must update VirusTotal automatically via [release automation](docs/RELEASE_AUTOMATION.md).
 
 ### 🇪🇸 Español
 
 **Descarga el APK oficial de la release:**
-👉 [TUSB-v1.0.3.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.3/TUSB-v1.0.3.apk)
+👉 [TUSB-v1.0.4.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.4/TUSB-v1.0.4.apk)
 
-**Verificación VirusTotal:** `0 malicioso`, `0 sospechoso`, `67 no detectado`, `6 no soportado`
-**SHA-256:** `4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E`
-**Informe:** [VirusTotal](https://www.virustotal.com/gui/file/4C29F4B50C84BAB48D0C01211174F1B682B156B344E301AD642408118524278E) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.3/VIRUSTOTAL.md)
+**Verificación VirusTotal:** publicada automaticamente en la release por el workflow.
+**SHA-256:** publicado en las notas de la release.
+**Informe:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
 
 **Regla para nuevas versiones:** cada nueva release con APK debe actualizar VirusTotal automáticamente mediante [release automation](docs/RELEASE_AUTOMATION.md).
 
@@ -73,6 +73,13 @@
 ---
 
 ## 🇧🇷 Português Brasil
+
+### Destaques da V1.0.4
+
+- Seletor de modo do CAB no detalhe do efeito: Tone Model, VIR e Off.
+- Cadeia de efeitos respeita a posição Pre/Post dos blocos mapeados.
+- Temas locais Classic, Stage e Ocean no Menu.
+- Correções de sincronização de estado para bypass, modo do pedal e parâmetros do preset.
 
 ### Destaques da V1.0.3
 
@@ -139,6 +146,13 @@ O APK debug fica em `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 🇺🇸 English US
 
+### V1.0.4 highlights
+
+- CAB mode selector in the effect detail screen: Tone Model, VIR, and Off.
+- Effect chain now follows mapped Pre/Post block positions.
+- Local Classic, Stage, and Ocean themes in Menu.
+- State synchronization fixes for bypass, pedal mode, and preset parameters.
+
 ### V1.0.3 highlights
 
 - TUSB editor redesign with black 3D knobs, darker textured background, and visual effect chain.
@@ -203,6 +217,13 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 ---
 
 ## 🇪🇸 Español
+
+### Novedades de la V1.0.4
+
+- Selector de modo CAB en el detalle del efecto: Tone Model, VIR y Off.
+- La cadena de efectos respeta las posiciones Pre/Post de los bloques mapeados.
+- Temas locales Classic, Stage y Ocean en el Menu.
+- Correcciones de sincronizacion de estado para bypass, modo del pedal y parametros del preset.
 
 ### Novedades de la V1.0.3
 

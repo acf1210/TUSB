@@ -44,11 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.opentonex.controller.ui.theme.ToneXBackground
-import com.opentonex.controller.ui.theme.ToneXDivider
 import com.opentonex.controller.ui.theme.ToneXOnSurface
 import com.opentonex.controller.ui.theme.ToneXOnSurfaceMuted
-import com.opentonex.controller.ui.theme.ToneXSurfaceHigh
 import androidx.annotation.StringRes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -76,6 +73,7 @@ import com.opentonex.controller.ui.editor.EffectSlotType
 import com.opentonex.controller.ui.menu.MenuScreen
 import com.opentonex.controller.ui.presets.PresetCustomizationStore
 import com.opentonex.controller.ui.presets.PresetsScreen
+import com.opentonex.controller.ui.theme.TusbTheme
 import com.opentonex.controller.ui.tools.ToolsScreen
 
 private enum class TopLevelDestination(val route: String, @StringRes val labelRes: Int) {
@@ -179,6 +177,7 @@ fun ToneXApp(
                 onEffectControl = viewModel::updateEffectControl,
                 onMasterVolumeChange = viewModel::updateMasterVolume,
                 onA4ReferenceChange = viewModel::updateA4Reference,
+                onThemeChange = viewModel::updateTheme,
                 captureState = captureState,
                 onRefreshState = viewModel::refreshState,
                 onStartCapture = { viewModel.startCapture(onResolveCaptureDirectory()) },
@@ -222,6 +221,7 @@ private fun ConnectedApp(
     onEffectControl: (EffectSlotType, EffectControl, Float) -> Unit,
     onMasterVolumeChange: (Float) -> Unit,
     onA4ReferenceChange: (Int) -> Unit,
+    onThemeChange: (TusbTheme) -> Unit,
     captureState: CaptureUiState,
     onRefreshState: () -> Unit,
     onStartCapture: () -> Unit,
@@ -250,7 +250,7 @@ private fun ConnectedApp(
                 ConnectedNavHost(
                     navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
                     onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onA4ReferenceChange,
-                    captureState, onRefreshState, onStartCapture, onStopCapture,
+                    onThemeChange, captureState, onRefreshState, onStartCapture, onStopCapture,
                     onDisconnect, midiController, modifier = Modifier.fillMaxSize()
                 )
             }
@@ -265,7 +265,7 @@ private fun ConnectedApp(
             ConnectedNavHost(
                 navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
                 onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onA4ReferenceChange,
-                captureState, onRefreshState, onStartCapture, onStopCapture,
+                onThemeChange, captureState, onRefreshState, onStartCapture, onStopCapture,
                 onDisconnect, midiController, modifier = Modifier.fillMaxSize().padding(padding)
             )
         }
@@ -292,6 +292,7 @@ private fun ConnectedNavHost(
     onEffectControl: (EffectSlotType, EffectControl, Float) -> Unit,
     onMasterVolumeChange: (Float) -> Unit,
     onA4ReferenceChange: (Int) -> Unit,
+    onThemeChange: (TusbTheme) -> Unit,
     captureState: CaptureUiState,
     onRefreshState: () -> Unit,
     onStartCapture: () -> Unit,
@@ -322,7 +323,7 @@ private fun ConnectedNavHost(
                 cabSimBypass = pedal.cabSimBypass,
                 ampKnobs = ampKnobs,
                 busyReason = busyState.busyReason,
-                effectChain = effectChain.enabled,
+                effectChain = effectChain,
                 rigModels = pedal.rigModels(),
                 ampNameOverride = activeCustom?.ampName,
                 cabNameOverride = activeCustom?.cabName,
@@ -382,8 +383,10 @@ private fun ConnectedNavHost(
                 lastCaptureFilePath = captureState.lastFilePath,
                 masterVolume = menuState.masterVolume,
                 a4ReferenceOverride = menuState.a4ReferenceOverride,
+                theme = menuState.theme,
                 onMasterVolumeChange = onMasterVolumeChange,
                 onA4ReferenceChange = onA4ReferenceChange,
+                onThemeChange = onThemeChange,
                 onRefreshState = onRefreshState,
                 onStartCapture = onStartCapture,
                 onStopCapture = onStopCapture,
@@ -403,8 +406,8 @@ private fun TusbBottomNav(
     navController: NavHostController,
     destinations: List<TopLevelDestination>
 ) {
-    Column(modifier = Modifier.fillMaxWidth().background(ToneXBackground)) {
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(ToneXDivider))
+    Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outline))
         Row(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
             destinations.forEach { destination ->
                 val (isSelected, onClick) = rememberNavItem(navController, destination)
@@ -420,7 +423,7 @@ private fun TusbBottomNav(
                     Box(
                         modifier = Modifier
                             .background(
-                                color = if (isSelected) ToneXSurfaceHigh else Color.Transparent,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.24f) else Color.Transparent,
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .padding(horizontal = 14.dp, vertical = 3.dp)

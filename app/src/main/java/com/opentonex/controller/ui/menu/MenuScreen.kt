@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
@@ -34,6 +35,7 @@ import androidx.compose.foundation.verticalScroll
 import com.opentonex.controller.R
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.midi.MidiController
+import com.opentonex.controller.ui.theme.TusbTheme
 
 private enum class MenuTab(@StringRes val labelRes: Int) {
     DEVICE(R.string.menu_device),
@@ -54,8 +56,10 @@ fun MenuScreen(
     lastCaptureFilePath: String?,
     masterVolume: Float,
     a4ReferenceOverride: Int,
+    theme: TusbTheme,
     onMasterVolumeChange: (Float) -> Unit,
     onA4ReferenceChange: (Int) -> Unit,
+    onThemeChange: (TusbTheme) -> Unit,
     onRefreshState: () -> Unit,
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
@@ -104,7 +108,11 @@ fun MenuScreen(
                     pedalA4Reference = pedal.a4Reference,
                     onA4ReferenceChange = onA4ReferenceChange
                 )
-                MenuTab.GENERAL -> PlaceholderFieldsTab(fields = listOf("Tempo" to "${pedal.tempo} BPM"))
+                MenuTab.GENERAL -> GeneralTab(
+                    tempo = pedal.tempo,
+                    theme = theme,
+                    onThemeChange = onThemeChange
+                )
             }
         }
     }
@@ -198,6 +206,30 @@ private fun TunerTab(a4ReferenceOverride: Int, pedalA4Reference: Int, onA4Refere
             )
         }
     }
+}
+
+@Composable
+private fun GeneralTab(tempo: Int, theme: TusbTheme, onThemeChange: (TusbTheme) -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = stringResource(R.string.menu_theme), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TusbTheme.entries.forEach { option ->
+                    FilterChip(
+                        selected = theme == option,
+                        onClick = { onThemeChange(option) },
+                        label = { Text(option.label) }
+                    )
+                }
+            }
+            Text(
+                text = stringResource(R.string.menu_theme_note),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    PlaceholderFieldsTab(fields = listOf("Tempo" to "$tempo BPM"))
 }
 
 @Composable

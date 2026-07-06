@@ -19,6 +19,18 @@ val ToneXAccentVariant = Color(0xFFC8A04A)
 val ToneXGreen = Color(0xFF4CD964)
 val ToneXError = Color(0xFFFF5252)
 
+val StageBackground = Color(0xFF120D10)
+val StageSurface = Color(0xFF24191F)
+val StageSurfaceVariant = Color(0xFF33242D)
+val StageAccent = Color(0xFFFF4F7A)
+val StageSecondary = Color(0xFFFFB020)
+
+val OceanBackground = Color(0xFF081114)
+val OceanSurface = Color(0xFF122126)
+val OceanSurfaceVariant = Color(0xFF1D323A)
+val OceanAccent = Color(0xFF38D5D0)
+val OceanSecondary = Color(0xFF8BE36B)
+
 // Slots A/B/C
 val ToneXSlotA = Color(0xFFF0A030)
 val ToneXSlotB = Color(0xFF7040D0)

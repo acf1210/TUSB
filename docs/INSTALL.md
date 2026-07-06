@@ -10,7 +10,7 @@
 
 ### Opção A - Instalar o APK pronto
 
-1. Baixe o APK mais recente em [Releases](../../releases), arquivo `TUSB-v1.0.3.apk` ou mais novo.
+1. Baixe o APK mais recente em [Releases](../../releases), arquivo `TUSB-v1.0.4.apk` ou mais novo.
 2. Abra o APK no celular Android.
 3. Se o Android pedir permissão para instalar apps de fontes desconhecidas, toque em
    **Permitir**.
@@ -56,7 +56,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ### Option A - Install the prebuilt APK
 
-1. Download the latest APK from [Releases](../../releases), file `TUSB-v1.0.3.apk` or newer.
+1. Download the latest APK from [Releases](../../releases), file `TUSB-v1.0.4.apk` or newer.
 2. Open the APK on your Android phone.
 3. If Android asks permission to install apps from unknown sources, tap **Allow**.
 4. Tap **Install**.
@@ -101,7 +101,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ### Opción A - Instalar el APK listo
 
-1. Descarga el APK más reciente en [Releases](../../releases), archivo `TUSB-v1.0.3.apk` o más nuevo.
+1. Descarga el APK más reciente en [Releases](../../releases), archivo `TUSB-v1.0.4.apk` o más nuevo.
 2. Abre el APK en el teléfono Android.
 3. Si Android pide permiso para instalar apps de fuentes desconocidas, toca **Permitir**.
 4. Toca **Instalar**.

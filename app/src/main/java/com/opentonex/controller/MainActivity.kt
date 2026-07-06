@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.io.File
 import com.opentonex.controller.connection.FakePedalConnection
 import com.opentonex.controller.connection.PedalConnection
@@ -34,7 +35,8 @@ class MainActivity : ComponentActivity() {
         midiController = midi
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
-            ToneXTheme {
+            val menuState = pedalViewModel.menu.collectAsStateWithLifecycle()
+            ToneXTheme(theme = menuState.value.theme) {
                 ToneXApp(
                     windowSizeClass = windowSizeClass,
                     onCreateRealConnection = { createRealConnection() },

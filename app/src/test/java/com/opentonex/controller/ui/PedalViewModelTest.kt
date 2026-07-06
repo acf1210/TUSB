@@ -1,12 +1,16 @@
 package com.opentonex.controller.ui
 
 import com.opentonex.controller.connection.FakePedalConnection
+import com.opentonex.controller.connection.Handshake
 import com.opentonex.controller.connection.PedalConnection
 import com.opentonex.controller.connection.PedalRuntimeEvent
+import com.opentonex.controller.domain.FirmwareInfo
 import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.Slot
+import com.opentonex.controller.domain.TonexEffectParams
 import com.opentonex.controller.repository.ConnectionState
+import com.opentonex.controller.ui.editor.EffectSlotType
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.CompletableDeferred
@@ -55,6 +59,44 @@ private class BlockingSelectPedalConnection : PedalConnection {
     fun finishSelection() {
         selectGate.complete(Unit)
     }
+}
+
+private class ParameterStatePedalConnection : PedalConnection {
+    private var pedalState = PedalState(
+        activeSlot = Slot.A,
+        inputTrim = 0f,
+        a4Reference = 440,
+        tempo = 120,
+        slots = emptyList(),
+        presetParameters = MutableList(120) { 0f }
+    )
+
+    override val runtimeEvents: Flow<PedalRuntimeEvent> = emptyFlow()
+
+    override suspend fun connect() = Unit
+
+    override suspend fun handshake(): Handshake =
+        Handshake(FirmwareInfo("SIM-PARAMS"), pedalState)
+
+    override suspend fun requestState(): PedalState = pedalState
+
+    override suspend fun writeState(state: PedalState) {
+        pedalState = state
+    }
+
+    override suspend fun selectPreset(presetId: Int) = Unit
+
+    override suspend fun loadPresetToSlot(currentState: PedalState, presetId: Int, slot: Slot, selectSlot: Boolean) = Unit
+
+    override suspend fun switchMode(currentState: PedalState, targetMode: PedalMode) {
+        pedalState = pedalState.copy(pedalMode = targetMode)
+    }
+
+    override suspend fun writeParameter(paramIndex: Int, value: Float) {
+        pedalState = pedalState.withParameterValue(paramIndex, value)
+    }
+
+    override suspend fun disconnect() = Unit
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -109,11 +151,80 @@ class PedalViewModelTest {
         viewModel.connectWith(fake)
         advanceUntilIdle()
 
-        viewModel.toggleEffectEnabled(com.opentonex.controller.ui.editor.EffectSlotType.REV)
+        viewModel.toggleEffectEnabled(EffectSlotType.REV)
         advanceUntilIdle()
 
         // REVERB_ENABLE = indice 37; toggle a partir do default (true) escreve 0 (off).
         assertEquals(0f, fake.parameters[37] ?: Float.NaN, 0.0001f)
+    }
+
+    @Test fun `effect chain positions follow pre post parameters`() {
+        val params = MutableList(120) { 1f }
+        params[TonexEffectParams.GATE_POST.index] = 1f
+        params[TonexEffectParams.MODULATION_POST.index] = 0f
+        val pedal = PedalState(
+            activeSlot = Slot.A,
+            inputTrim = 0f,
+            a4Reference = 440,
+            tempo = 120,
+            slots = emptyList(),
+            presetParameters = params
+        )
+
+        val chain = EffectChainUiState().withPedalParameters(pedal)
+
+        assertTrue(chain.isPost(EffectSlotType.GATE))
+        assertEquals(false, chain.isPost(EffectSlotType.MOD))
+    }
+
+    @Test fun `pedal state equality includes runtime ui fields`() {
+        val pedal = PedalState(
+            activeSlot = Slot.A,
+            inputTrim = 0f,
+            a4Reference = 440,
+            tempo = 120,
+            slots = emptyList(),
+            presetParameters = MutableList(120) { 0f }
+        )
+
+        assertTrue(pedal != pedal.copy(pedalMode = PedalMode.STOMP))
+        assertTrue(pedal != pedal.copy(cabSimBypass = true))
+        assertTrue(pedal != pedal.copy(bypassMode = true))
+        assertTrue(pedal != pedal.withParameterValue(24, 2f))
+    }
+
+    @Test fun `updateEffectControl post moves effect locally`() = runTest {
+        val viewModel = PedalViewModel()
+        viewModel.connectWith(FakePedalConnection())
+        advanceUntilIdle()
+
+        viewModel.updateEffectControl(EffectSlotType.MOD, EffectControl.POST, 0f)
+
+        assertEquals(false, viewModel.effectChain.value.isPost(EffectSlotType.MOD))
+    }
+
+    @Test fun `updateEffectControl cabinet type writes off value`() = runTest {
+        val fake = FakePedalConnection()
+        val viewModel = PedalViewModel()
+        viewModel.connectWith(fake)
+        advanceUntilIdle()
+
+        viewModel.updateEffectControl(EffectSlotType.CAB, EffectControl.CABINET_TYPE, 2f)
+        advanceUntilIdle()
+
+        assertEquals(2f, fake.parameters[24] ?: Float.NaN, 0.0001f)
+    }
+
+    @Test fun `updateEffectControl cabinet type updates effect detail`() = runTest {
+        val connection = ParameterStatePedalConnection()
+        val viewModel = PedalViewModel()
+        viewModel.connectWith(connection)
+        advanceUntilIdle()
+
+        viewModel.updateEffectControl(EffectSlotType.CAB, EffectControl.CABINET_TYPE, 2f)
+        advanceUntilIdle()
+
+        assertEquals(2, viewModel.effectDetail(EffectSlotType.CAB).cabinetType)
     }
 
     @Test fun `initial state is Disconnected`() {

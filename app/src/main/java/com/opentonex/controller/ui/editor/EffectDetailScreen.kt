@@ -139,6 +139,18 @@ fun EffectDetailScreen(
                     }
                 )
             }
+            val cabinetType = detail.cabinetType
+            if (effect == EffectSlotType.CAB && cabinetType != null) {
+                TusbSegmentedRow(
+                    options = listOf("Tone Model", "VIR", "Off"),
+                    selectedIndex = cabinetType,
+                    activeColor = ToneXGreen,
+                    modifier = Modifier.fillMaxWidth(),
+                    onSelect = { index ->
+                        onControlChange(EffectControl.CABINET_TYPE, index.toFloat())
+                    }
+                )
+            }
 
             // Knobs verdes (acento do design para blocos de efeito)
             Row(

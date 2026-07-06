@@ -65,6 +65,8 @@
     <string name="menu_decrease">Decrease</string>
     <string name="menu_increase">Increase</string>
     <string name="menu_a4_note">Local setting (430-450 Hz). The pedal currently reports %1$d Hz; real write support is not implemented yet.</string>
+    <string name="menu_theme">Theme</string>
+    <string name="menu_theme_note">Changes app colors and visual accents locally.</string>
     <string name="menu_visual_only">Visual configuration only: not implemented in this controller yet.</string>
     <string name="presets_pedal_slots">Pedal slots</string>
     <string name="presets_stomp_hint">STOMP mode: A, B, and C are available as pedal scenes.</string>
