@@ -26,7 +26,8 @@
 - APK: `TUSB-v1.0.4.apk`
 - Version code: `13`
 - SHA-256: `1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6`
-- VirusTotal: published automatically by the `VirusTotal APK scan` workflow after release publication.
+- VirusTotal: `0` malicious / `0` suspicious / `67` undetected / `6` unsupported.
+- VirusTotal report: https://www.virustotal.com/gui/file/1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6
 
 ## Legal
 

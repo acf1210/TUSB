@@ -32,9 +32,9 @@
 **Baixe o APK oficial da release:**
 👉 [TUSB-v1.0.4.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.4/TUSB-v1.0.4.apk)
 
-**Verificação VirusTotal:** publicada automaticamente na release pelo workflow.
-**SHA-256:** publicado nas notas da release.
-**Relatório:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
+**Verificação VirusTotal:** `0 malicioso`, `0 suspeito`, `67 não detectado`, `6 não suportado`
+**SHA-256:** `1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6`
+**Relatório:** [VirusTotal](https://www.virustotal.com/gui/file/1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
 
 **Regra para novas versões:** toda nova release com APK deve atualizar o VirusTotal automaticamente via [release automation](docs/RELEASE_AUTOMATION.md).
 
@@ -43,9 +43,9 @@
 **Download the official release APK:**
 👉 [TUSB-v1.0.4.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.4/TUSB-v1.0.4.apk)
 
-**VirusTotal scan:** published automatically on the release by the workflow.
-**SHA-256:** published in the release notes.
-**Report:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
+**VirusTotal scan:** `0 malicious`, `0 suspicious`, `67 undetected`, `6 unsupported`
+**SHA-256:** `1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6`
+**Report:** [VirusTotal](https://www.virustotal.com/gui/file/1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
 
 **Rule for new versions:** every new release with an APK must update VirusTotal automatically via [release automation](docs/RELEASE_AUTOMATION.md).
 
@@ -54,9 +54,9 @@
 **Descarga el APK oficial de la release:**
 👉 [TUSB-v1.0.4.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.4/TUSB-v1.0.4.apk)
 
-**Verificación VirusTotal:** publicada automaticamente en la release por el workflow.
-**SHA-256:** publicado en las notas de la release.
-**Informe:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
+**Verificación VirusTotal:** `0 malicioso`, `0 sospechoso`, `67 no detectado`, `6 no soportado`
+**SHA-256:** `1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6`
+**Informe:** [VirusTotal](https://www.virustotal.com/gui/file/1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
 
 **Regla para nuevas versiones:** cada nueva release con APK debe actualizar VirusTotal automáticamente mediante [release automation](docs/RELEASE_AUTOMATION.md).
 
