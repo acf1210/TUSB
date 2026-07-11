@@ -123,13 +123,24 @@ class MidiCommandDispatcherTest {
     }
 
     @Test
-    fun `learn mode ignores program change`() {
+    fun `learn mode captures program change`() {
         val handler = FakeHandler()
         val d = dispatcher(handler)
+        var learned: Pair<MidiAction, Int>? = null
+        d.onLearned = { action, key -> learned = action to key }
         d.startLearn(MidiAction.TOGGLE_CAB)
         d.dispatch(MidiMessage.ProgramChange(0, 3))
-        assertEquals(MidiAction.TOGGLE_CAB, d.learnTarget.value)
+        assertEquals(MidiAction.TOGGLE_CAB to programChangeKey(3), learned)
+        assertNull(d.learnTarget.value)
         assertTrue(handler.calls.isEmpty())
+    }
+
+    @Test
+    fun `mapped program change dispatches mapped action instead of loading preset`() {
+        val handler = FakeHandler()
+        val mapping = MidiMapping.DEFAULT.withLearned(MidiAction.TOGGLE_BYPASS, programChangeKey(3))
+        dispatcher(handler, mapping).dispatch(MidiMessage.ProgramChange(0, 3))
+        assertEquals(listOf("bypass"), handler.calls)
     }
 
     @Test

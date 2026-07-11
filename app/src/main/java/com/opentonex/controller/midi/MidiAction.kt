@@ -1,11 +1,6 @@
 package com.opentonex.controller.midi
 
-/**
- * Acoes do app que podem ser disparadas por Control Change. Program Change NAO esta aqui
- * de proposito: PC n carrega sempre o preset n (0..19), fixo e nao remapeavel.
- *
- * [label] usa jargao de guitarra identico em PT/EN/ES, por isso nao e um string resource.
- */
+/** Acoes do app que podem ser disparadas por MIDI Learn. */
 enum class MidiAction(val label: String, val isContinuous: Boolean = false) {
     SELECT_SLOT_A("Slot A"),
     SELECT_SLOT_B("Slot B"),

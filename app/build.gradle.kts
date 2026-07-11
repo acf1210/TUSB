@@ -12,8 +12,8 @@ android {
         applicationId = "com.opentonex.controller"
         minSdk = 24
         targetSdk = 34
-        versionCode = 13
-        versionName = "1.0.4"
+        versionCode = 14
+        versionName = "1.0.5"
     }
     buildFeatures { compose = true }
     testOptions {

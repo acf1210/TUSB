@@ -50,16 +50,21 @@ class MidiCommandDispatcher(
         _lastMessage.value = message
         val learn = _learnTarget.value
         if (learn != null) {
-            // PC nao e remapeavel: em modo Learn so CC captura.
-            if (message is MidiMessage.ControlChange) {
-                _learnTarget.value = null
-                onLearned?.invoke(learn, message.controller)
+            val key = when (message) {
+                is MidiMessage.ControlChange -> message.controller
+                is MidiMessage.ProgramChange -> programChangeKey(message.program)
             }
+            _learnTarget.value = null
+            onLearned?.invoke(learn, key)
             return
         }
         when (message) {
-            is MidiMessage.ProgramChange ->
-                if (message.program in 0 until PRESET_COUNT) handler.loadPreset(message.program)
+            is MidiMessage.ProgramChange -> {
+                val action = mappingProvider().actionFor(programChangeKey(message.program))
+                if (action != null) perform(action, 127) else if (message.program in 0 until PRESET_COUNT) {
+                    handler.loadPreset(message.program)
+                }
+            }
             is MidiMessage.ControlChange -> {
                 val action = mappingProvider().actionFor(message.controller) ?: return
                 perform(action, message.value)

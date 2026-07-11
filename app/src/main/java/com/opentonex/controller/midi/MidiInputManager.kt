@@ -1,6 +1,8 @@
 package com.opentonex.controller.midi
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
@@ -14,6 +16,7 @@ import android.media.midi.MidiDeviceInfo
 import android.media.midi.MidiManager
 import android.media.midi.MidiOutputPort
 import android.media.midi.MidiReceiver
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelUuid
@@ -91,6 +94,7 @@ class MidiInputManager(
         @Suppress("DEPRECATION")
         midiManager?.registerDeviceCallback(deviceCallback, mainHandler)
         refreshUsbDevices()
+        refreshBluetoothMidiDevices()
     }
 
     /** Recarrega a lista de dispositivos USB MIDI (BLE encontrados no scan sao mantidos). */
@@ -118,7 +122,9 @@ class MidiInputManager(
         if (midiManager == null) return
         val bluetoothManager =
             context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-        val scanner = bluetoothManager?.adapter?.bluetoothLeScanner
+        val adapter = bluetoothManager?.adapter
+        if (adapter != null && hasBluetoothConnectPermission()) refreshBluetoothMidiDevices(adapter)
+        val scanner = adapter?.bluetoothLeScanner
         if (scanner == null) {
             _state.value = MidiConnectionState.Error("Bluetooth indisponível")
             return
@@ -154,6 +160,31 @@ class MidiInputManager(
         scanner.startScan(listOf(filter), settings, callback)
         mainHandler.postDelayed({ stopBleScan() }, SCAN_TIMEOUT_MS)
     }
+
+    @SuppressLint("MissingPermission")
+    private fun refreshBluetoothMidiDevices(
+        adapter: BluetoothAdapter? = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+    ) {
+        if (midiManager == null || adapter == null || !hasBluetoothConnectPermission()) return
+        val bonded = adapter.bondedDevices
+            .filter { hasBleMidiService(it.uuids?.map(ParcelUuid::getUuid)) || isKnownBleMidiDeviceName(it.name) }
+            .mapNotNull { device ->
+                val name = device.name ?: return@mapNotNull null
+                MidiDeviceUi(
+                    id = "ble-${device.address}",
+                    name = name,
+                    isBluetooth = true,
+                    bleDevice = device
+                )
+            }
+        if (bonded.isEmpty()) return
+        val existingIds = _devices.value.mapTo(mutableSetOf()) { it.id }
+        _devices.value = _devices.value + bonded.filter { existingIds.add(it.id) }
+    }
+
+    private fun hasBluetoothConnectPermission(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
 
     @SuppressLint("MissingPermission")
     fun stopBleScan() {
@@ -219,8 +250,17 @@ class MidiInputManager(
     }
 
     private companion object {
-        /** Service UUID padrao do BLE MIDI (spec MMA). */
-        val MIDI_SERVICE_UUID: UUID = UUID.fromString("03B80E5A-EDE8-4B33-A751-6CE34EC4C700")
         const val SCAN_TIMEOUT_MS = 15_000L
     }
+}
+
+/** Service UUID padrao do BLE MIDI (spec MMA). */
+internal val MIDI_SERVICE_UUID: UUID = UUID.fromString("03B80E5A-EDE8-4B33-A751-6CE34EC4C700")
+
+internal fun hasBleMidiService(uuids: Iterable<UUID>?): Boolean =
+    uuids?.any { it == MIDI_SERVICE_UUID } == true
+
+internal fun isKnownBleMidiDeviceName(name: String?): Boolean {
+    val normalized = name?.lowercase().orEmpty()
+    return listOf("footctrl", "m-vave", "mvave", "chocolate").any(normalized::contains)
 }

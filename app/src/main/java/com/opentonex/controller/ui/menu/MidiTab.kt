@@ -31,6 +31,7 @@ import com.opentonex.controller.midi.MidiAction
 import com.opentonex.controller.midi.MidiConnectionState
 import com.opentonex.controller.midi.MidiController
 import com.opentonex.controller.midi.MidiMessage
+import com.opentonex.controller.midi.midiMappingLabel
 
 /** Permissoes de runtime necessarias para o scan BLE conforme a versao do Android. */
 private fun bleScanPermissions(): Array<String> =
@@ -183,7 +184,7 @@ fun MidiTab(controller: MidiController?) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = mapping.ccFor(action)?.let { "CC $it" }
+                            text = mapping.ccFor(action)?.let { midiMappingLabel(it) }
                                 ?: stringResource(R.string.midi_cc_none),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-1.0.4-brightgreen" />
+  <img alt="version" src="https://img.shields.io/badge/version-1.0.5-brightgreen" />
   <img alt="platform" src="https://img.shields.io/badge/platform-Android%207.0%2B-3DDC84" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue" />
   <img alt="status" src="https://img.shields.io/badge/status-community-orange" />
@@ -25,38 +25,35 @@
 
 ---
 
-## 📦 APK V1.0.4 / VirusTotal
+## 📦 APK V1.0.5 / VirusTotal
 
 ### 🇧🇷 Português Brasil
 
 **Baixe o APK oficial da release:**
-👉 [TUSB-v1.0.4.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.4/TUSB-v1.0.4.apk)
+👉 [TUSB-v1.0.5.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.5/TUSB-v1.0.5.apk)
 
-**Verificação VirusTotal:** `0 malicioso`, `0 suspeito`, `67 não detectado`, `6 não suportado`
-**SHA-256:** `1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6`
-**Relatório:** [VirusTotal](https://www.virustotal.com/gui/file/1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
+**Verificação VirusTotal:** gerada automaticamente pelo workflow da release.
+**Relatório:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.5/VIRUSTOTAL.md)
 
 **Regra para novas versões:** toda nova release com APK deve atualizar o VirusTotal automaticamente via [release automation](docs/RELEASE_AUTOMATION.md).
 
 ### 🇺🇸 English US
 
 **Download the official release APK:**
-👉 [TUSB-v1.0.4.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.4/TUSB-v1.0.4.apk)
+👉 [TUSB-v1.0.5.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.5/TUSB-v1.0.5.apk)
 
-**VirusTotal scan:** `0 malicious`, `0 suspicious`, `67 undetected`, `6 unsupported`
-**SHA-256:** `1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6`
-**Report:** [VirusTotal](https://www.virustotal.com/gui/file/1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
+**VirusTotal scan:** generated automatically by the release workflow.
+**Report:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.5/VIRUSTOTAL.md)
 
 **Rule for new versions:** every new release with an APK must update VirusTotal automatically via [release automation](docs/RELEASE_AUTOMATION.md).
 
 ### 🇪🇸 Español
 
 **Descarga el APK oficial de la release:**
-👉 [TUSB-v1.0.4.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.4/TUSB-v1.0.4.apk)
+👉 [TUSB-v1.0.5.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.5/TUSB-v1.0.5.apk)
 
-**Verificación VirusTotal:** `0 malicioso`, `0 sospechoso`, `67 no detectado`, `6 no soportado`
-**SHA-256:** `1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6`
-**Informe:** [VirusTotal](https://www.virustotal.com/gui/file/1E9BA58AA027165C32169A53794287FEA883C3CBF4E923710BC354827A0D16F6) · [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.4/VIRUSTOTAL.md)
+**Verificación VirusTotal:** generada automaticamente por el workflow de release.
+**Informe:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.5/VIRUSTOTAL.md)
 
 **Regla para nuevas versiones:** cada nueva release con APK debe actualizar VirusTotal automáticamente mediante [release automation](docs/RELEASE_AUTOMATION.md).
 
@@ -73,6 +70,12 @@
 ---
 
 ## 🇧🇷 Português Brasil
+
+### Destaques da V1.0.5
+
+- M-Vave Chocolate/FootCtrlPlus pareado por Bluetooth agora aparece na lista MIDI mesmo quando o Android expoe o pedal como HID/HOGP.
+- MIDI Learn agora captura Program Change (`PC n`), alem de Control Change, para mapear os botoes de fabrica do Chocolate.
+- Program Change mapeado tem prioridade sobre o carregamento direto de preset.
 
 ### Destaques da V1.0.4
 
@@ -146,6 +149,12 @@ O APK debug fica em `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 🇺🇸 English US
 
+### V1.0.5 highlights
+
+- Paired M-Vave Chocolate/FootCtrlPlus devices now appear in the MIDI list even when Android exposes the pedal as HID/HOGP.
+- MIDI Learn now captures Program Change (`PC n`) as well as Control Change, so factory Chocolate buttons can be mapped.
+- Mapped Program Change messages take priority over direct preset loading.
+
 ### V1.0.4 highlights
 
 - CAB mode selector in the effect detail screen: Tone Model, VIR, and Off.
@@ -217,6 +226,12 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 ---
 
 ## 🇪🇸 Español
+
+### Novedades de la V1.0.5
+
+- M-Vave Chocolate/FootCtrlPlus emparejado por Bluetooth ahora aparece en la lista MIDI aunque Android exponga el pedal como HID/HOGP.
+- MIDI Learn ahora captura Program Change (`PC n`), ademas de Control Change, para mapear los botones de fabrica del Chocolate.
+- Program Change mapeado tiene prioridad sobre la carga directa de preset.
 
 ### Novedades de la V1.0.4
 

@@ -47,7 +47,7 @@ class MidiMappingTest {
 
     @Test
     fun `codec round trip preserves mapping`() {
-        val original = MidiMapping.DEFAULT.withLearned(MidiAction.AMP_GAIN, 7)
+        val original = MidiMapping.DEFAULT.withLearned(MidiAction.AMP_GAIN, programChangeKey(7))
         val decoded = MidiMappingCodec.decode(MidiMappingCodec.encode(original))
         assertEquals(original, decoded)
     }
@@ -63,5 +63,11 @@ class MidiMappingTest {
         assertEquals(MidiMapping.DEFAULT, MidiMappingCodec.decode("20=NOT_AN_ACTION"))
         assertEquals(MidiMapping.DEFAULT, MidiMappingCodec.decode("garbage"))
         assertEquals(MidiMapping.DEFAULT, MidiMappingCodec.decode("999=TOGGLE_BYPASS"))
+    }
+
+    @Test
+    fun `mapping label distinguishes cc and program change`() {
+        assertEquals("CC 25", midiMappingLabel(25))
+        assertEquals("PC 3", midiMappingLabel(programChangeKey(3)))
     }
 }

@@ -35,6 +35,8 @@ tools/apk-reverse/apktool-out/
 tools/apk-reverse/pak-extract/
 tools/jadx/
 tools/apktool/
+APK/
+*.apk
 
 # Ferramenta de terceiros (Apktool) - baixar sob demanda, nao vendorizar.
 tools/apktool/*.jar

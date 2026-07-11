@@ -1,6 +1,6 @@
 package com.opentonex.controller.midi
 
-/** Mapa imutavel CC -> acao. Cada CC aciona no maximo uma acao e vice-versa. */
+/** Mapa imutavel de entrada MIDI -> acao. CC usa 0..127; PC usa 128..255. */
 data class MidiMapping(val ccToAction: Map<Int, MidiAction>) {
 
     fun actionFor(cc: Int): MidiAction? = ccToAction[cc]
@@ -58,7 +58,7 @@ object MidiMappingCodec {
             val parts = entry.split("=")
             if (parts.size != 2) return MidiMapping.DEFAULT
             val cc = parts[0].toIntOrNull() ?: return MidiMapping.DEFAULT
-            if (cc !in 0..127) return MidiMapping.DEFAULT
+            if (cc !in 0..255) return MidiMapping.DEFAULT
             val action = runCatching { MidiAction.valueOf(parts[1]) }.getOrNull()
                 ?: return MidiMapping.DEFAULT
             result[cc] = action
@@ -66,3 +66,10 @@ object MidiMappingCodec {
         return MidiMapping(result)
     }
 }
+
+private const val PROGRAM_CHANGE_OFFSET = 128
+
+internal fun programChangeKey(program: Int): Int = PROGRAM_CHANGE_OFFSET + program
+
+internal fun midiMappingLabel(key: Int): String =
+    if (key >= PROGRAM_CHANGE_OFFSET) "PC ${key - PROGRAM_CHANGE_OFFSET}" else "CC $key"
