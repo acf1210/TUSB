@@ -5,14 +5,14 @@
 <h1 align="center">TUSB - ToneX One USB Controller</h1>
 
 <p align="center">
-  <strong>Controle Android nativo via USB-C para ToneX One.</strong><br/>
-  <strong>Native Android USB-C controller for ToneX One.</strong><br/>
-  <strong>Controlador Android nativo por USB-C para ToneX One.</strong>
+  <strong>Controle Android via USB-C e versão iOS em modo Demo.</strong><br/>
+  <strong>Android USB-C controller and iOS Demo version.</strong><br/>
+  <strong>Controlador Android por USB-C y versión iOS en modo Demo.</strong>
 </p>
 
 <p align="center">
   <img alt="version" src="https://img.shields.io/badge/version-1.0.5-brightgreen" />
-  <img alt="platform" src="https://img.shields.io/badge/platform-Android%207.0%2B-3DDC84" />
+  <img alt="platform" src="https://img.shields.io/badge/platform-Android%207%2B%20%7C%20iOS%2017%2B-3DDC84" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue" />
   <img alt="status" src="https://img.shields.io/badge/status-community-orange" />
 </p>
@@ -22,6 +22,29 @@
   🇺🇸 <a href="#-english-us">English US</a> &nbsp;|&nbsp;
   🇪🇸 <a href="#-español">Español</a>
 </p>
+
+---
+
+## iOS / iPadOS
+
+A versão Apple está em `ios/` como um app SwiftUI para iOS 17+. O modo Demo reproduz o
+pedal no Simulator e permite validar Editor, Presets, ferramentas, MIDI e configurações
+sem possuir um iPhone.
+
+| Plataforma | Transporte ToneX One | Estado |
+|---|---|---|
+| Android 7+ | USB CDC-ACM direto | Validado em hardware |
+| iPhone / iOS 17+ | Demo/Fake no Simulator | Implementado e automatizado no CI macOS |
+| iPhone / iOS 17+ | USB CDC-ACM direto | Não disponível por API pública; requer MFi da IK ou bridge |
+| iPadOS 16+ em iPad com chip M | USBDriverKit | Rota futura; requer entitlement e teste físico |
+
+- [Visão técnica e limitações](docs/IOS.md)
+- [Instalação, build, assinatura e TestFlight](docs/IOS_INSTALL.md)
+- [Guia de utilização](docs/IOS_USER_GUIDE.md)
+
+> O Simulator valida software, mas não emula o cabo USB, BLE, microfone ou o ToneX One
+> físico. O projeto não declara compatibilidade física iOS sem um transporte autorizado
+> pela Apple e um ensaio em hardware real.
 
 ---
 

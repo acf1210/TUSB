@@ -48,3 +48,10 @@ tools/apktool/*.jar
 err.log
 *.log
 tonex-current-screen.png
+
+# Swift / Xcode (o projeto iOS e gerado por ios/project.yml)
+ios/.build/
+ios/DerivedData/
+ios/TUSBApp.xcodeproj/
+*.xcresult
+*.xcarchive

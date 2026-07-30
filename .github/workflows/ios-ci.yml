@@ -1,0 +1,129 @@
+name: iOS CI
+
+on:
+  pull_request:
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  XCODEGEN_VERSION: "2.46.0"
+  XCODEGEN_SHA256: "4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806"
+
+jobs:
+  build-and-test:
+    name: Core, build e testes
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Instalar XcodeGen
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip" \
+            --output "$RUNNER_TEMP/xcodegen.zip"
+          echo "${XCODEGEN_SHA256}  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 --check
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: Registrar versões
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/ios-ci"
+          xcodebuild -version | tee "$RUNNER_TEMP/ios-ci/xcode-version.txt"
+          swift --version | tee "$RUNNER_TEMP/ios-ci/swift-version.txt"
+          xcodegen --version | tee "$RUNNER_TEMP/ios-ci/xcodegen-version.txt"
+
+      - name: Testar TUSBCore com cobertura
+        working-directory: ios
+        run: |
+          set -o pipefail
+          swift test --enable-code-coverage \
+            2>&1 | tee "$RUNNER_TEMP/ios-ci/swift-test.log"
+
+      - name: Exigir 80% de cobertura do TUSBCore
+        working-directory: ios
+        run: node coverage.mjs "$(swift test --show-codecov-path)"
+
+      - name: Gerar projeto Xcode
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodegen generate \
+            2>&1 | tee "$RUNNER_TEMP/ios-ci/xcodegen.log"
+
+      - name: Selecionar um iPhone Simulator disponível
+        shell: bash
+        run: |
+          SIMULATOR_ID="$(
+            xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = [
+              device
+              for runtime in json.load(sys.stdin)["devices"].values()
+              for device in runtime
+              if device.get("isAvailable") and device["name"].startswith("iPhone")
+          ]
+          devices.sort(key=lambda device: ("iPhone 16" not in device["name"], device["name"]))
+          if not devices:
+              raise SystemExit("Nenhum iPhone Simulator disponível")
+          print(devices[0]["udid"])
+          '
+          )"
+          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$SIMULATOR_ID" 2>/dev/null || true
+          xcrun simctl bootstatus "$SIMULATOR_ID" -b
+
+      - name: Compilar para iPhone Simulator
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project TUSBApp.xcodeproj \
+            -scheme TUSBApp \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -resultBundlePath "$RUNNER_TEMP/ios-ci/TUSBApp-Build.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$RUNNER_TEMP/ios-ci/xcodebuild-build.log"
+
+      - name: Testar no iPhone Simulator com cobertura
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project TUSBApp.xcodeproj \
+            -scheme TUSBApp \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -enableCodeCoverage YES \
+            -resultBundlePath "$RUNNER_TEMP/ios-ci/TUSBApp-Test.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$RUNNER_TEMP/ios-ci/xcodebuild-test.log"
+
+      - name: Enviar resultados
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ios-ci-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/ios-ci/
+            ios/.build/**/codecov/
+          if-no-files-found: warn
+          retention-days: 14
