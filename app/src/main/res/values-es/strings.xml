@@ -81,6 +81,18 @@
     <string name="presets_load_active_slot">carga en el slot activo</string>
     <string name="presets_active">activo</string>
     <string name="presets_search">Buscar</string>
+    <string name="presets_mode_dual">Dual</string>
+    <string name="presets_mode_stomp">Stomp</string>
+    <string name="presets_mode_bank">Banco</string>
+    <string name="bank_add">Nuevo banco</string>
+    <string name="bank_empty">Aún no hay bancos. Crea uno para cambiar los presets A y B juntos.</string>
+    <string name="bank_new_title">Nuevo banco</string>
+    <string name="bank_edit_title">Editar banco</string>
+    <string name="bank_name">Nombre del banco</string>
+    <string name="bank_preset_a">Preset A</string>
+    <string name="bank_preset_b">Preset B</string>
+    <string name="bank_delete">Eliminar</string>
+    <string name="bank_edit_hint">Se guarda en este dispositivo. Al elegir un banco, los presets A y B se graban juntos en el pedal, en Dual.</string>
     <string name="preset_edit_name">Nombre del preset</string>
     <string name="preset_edit_amp">Modelo de amp</string>
     <string name="preset_edit_cab">Modelo de cab</string>
@@ -118,5 +130,7 @@
     <string name="midi_permission_needed">Se necesita permiso de Bluetooth para buscar footswitches MIDI.</string>
     <string name="midi_not_supported">Este dispositivo no es compatible con MIDI.</string>
     <string name="midi_pc_note">Program Change 0–19 siempre carga el preset 1–20 (compatible con el ajuste de fábrica del M-Vave Chocolate).</string>
+    <string name="midi_pc_bank">PC carga banco</string>
+    <string name="midi_pc_bank_note">Program Change selecciona un banco (PC 0 = banco 01) y graba los presets A y B juntos. Un PC aprendido sigue con la acción del mapa.</string>
     <string name="midi_cc_none">—</string>
 </resources>

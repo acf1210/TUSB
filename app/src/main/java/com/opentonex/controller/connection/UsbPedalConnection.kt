@@ -197,6 +197,18 @@ class UsbPedalConnection(
         transport.write(frame)
     }
 
+    override suspend fun assignAbPresets(currentState: PedalState, presetA: Int, presetB: Int) {
+        val payload = TonexMessages.buildAssignAbPresetsPayload(currentState.rawState, presetA, presetB)
+        val frame = HdlcCodec.encode(payload)
+        android.util.Log.d(
+            "ToneXConn",
+            "assignAbPresets A=$presetA B=$presetB frame(${frame.size}B)=" +
+                frame.take(12).joinToString(" ") { "%02X".format(it) } + "..."
+        )
+        emitRequestEvent(requestKind = "assign_ab_presets", payload = payload)
+        transport.write(frame)
+    }
+
     override suspend fun switchMode(currentState: PedalState, targetMode: PedalMode) {
         val payload = TonexMessages.buildSwitchModePayload(currentState.rawState, targetMode)
         val frame = HdlcCodec.encode(payload)

@@ -28,10 +28,14 @@ import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
@@ -77,13 +82,18 @@ import com.opentonex.controller.ui.theme.ToneXSlotCyan
 import com.opentonex.controller.ui.theme.ToneXSurfaceHigh
 import com.opentonex.controller.ui.theme.ToneXSurfaceVariant
 
+private enum class PresetListMode { DUAL, STOMP, BANK }
+
 @Composable
 fun PresetsScreen(
     activeSlot: Slot,
     pedalMode: PedalMode,
     bypassMode: Boolean,
     presets: List<PresetSlot>,
+    /** Ids da biblioteca atribuídos aos slots, na ordem A, B, C. */
+    presetIds: List<Int> = emptyList(),
     libraryPresets: List<LibraryPreset>,
+    banks: List<PresetBank> = emptyList(),
     isBusy: Boolean,
     /** Rotulo do cab do preset ativo (ex.: "VIR 4"), derivado do detalhe 0x0304. */
     activeCabLabel: String? = null,
@@ -94,12 +104,16 @@ fun PresetsScreen(
     onSaveCustomization: ((Int, PresetCustomization) -> Unit)? = null,
     onSelectSlot: (Slot) -> Unit,
     onLoadPreset: (Int) -> Unit,
+    onApplyBank: (PresetBank) -> Unit = {},
+    onSaveBanks: (List<PresetBank>) -> Unit = {},
     onSwitchMode: (PedalMode) -> Unit,
     onToggleBypass: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var editingPreset by remember { mutableStateOf<LibraryPreset?>(null) }
+    var listMode by remember { mutableStateOf(if (pedalMode == PedalMode.STOMP) PresetListMode.STOMP else PresetListMode.DUAL) }
+    var editingBank by remember { mutableStateOf<BankDraft?>(null) }
     val visiblePresets = remember(libraryPresets, searchQuery, customizations) {
         val source = libraryPresets.ifEmpty {
             (0 until 20).map { index -> LibraryPreset(index = index, name = "Preset ${index + 1}", color = fallbackPresetColor(index)) }
@@ -117,60 +131,147 @@ fun PresetsScreen(
         contentAlignment = Alignment.TopCenter
     ) {
     Column(modifier = Modifier.widthIn(max = 620.dp).fillMaxSize()) {
-        // Seletor de modo (segmentado, estilo tabs do design)
         TusbSegmentedRow(
-            options = listOf("Dual Mode", "Stomp Mode"),
-            selectedIndex = if (pedalMode == PedalMode.AB) 0 else 1,
+            options = listOf(
+                stringResource(R.string.presets_mode_dual),
+                stringResource(R.string.presets_mode_stomp),
+                stringResource(R.string.presets_mode_bank)
+            ),
+            selectedIndex = when (listMode) {
+                PresetListMode.DUAL -> 0
+                PresetListMode.STOMP -> 1
+                PresetListMode.BANK -> 2
+            },
             activeColor = ToneXSurfaceHigh,
             activeTextColor = Color.White,
             enabled = !isBusy,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-            onSelect = { index -> onSwitchMode(if (index == 0) PedalMode.AB else PedalMode.STOMP) }
+            onSelect = { index ->
+                when (index) {
+                    0 -> {
+                        listMode = PresetListMode.DUAL
+                        if (pedalMode != PedalMode.AB) onSwitchMode(PedalMode.AB)
+                    }
+                    1 -> {
+                        listMode = PresetListMode.STOMP
+                        if (pedalMode != PedalMode.STOMP) onSwitchMode(PedalMode.STOMP)
+                    }
+                    else -> {
+                        listMode = PresetListMode.BANK
+                        if (pedalMode != PedalMode.AB) onSwitchMode(PedalMode.AB)
+                    }
+                }
+            }
         )
 
-        // Deck de footswitches A/B/C (+ bypass no modo Dual)
-        FootswitchDeck(
-            activeSlot = activeSlot,
-            pedalMode = pedalMode,
-            bypassMode = bypassMode,
-            presets = presets,
-            isBusy = isBusy,
-            onSelectSlot = onSelectSlot,
-            onToggleBypass = onToggleBypass
-        )
+        if (listMode == PresetListMode.BANK) {
+            BankSlotDeck(
+                presetIds = presetIds,
+                libraryPresets = libraryPresets,
+                customizations = customizations,
+                activeSlot = activeSlot,
+                isBusy = isBusy,
+                onSelectSlot = onSelectSlot
+            )
+        } else {
+            FootswitchDeck(
+                activeSlot = activeSlot,
+                pedalMode = if (listMode == PresetListMode.STOMP) PedalMode.STOMP else PedalMode.AB,
+                bypassMode = bypassMode,
+                presets = presets,
+                isBusy = isBusy,
+                onSelectSlot = onSelectSlot,
+                onToggleBypass = onToggleBypass
+            )
+        }
 
-        // Busca
         SearchField(
             query = searchQuery,
             onQueryChange = { searchQuery = it },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
         )
 
-        // Lista de presets da biblioteca no estilo do design
-        LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            items(visiblePresets, key = { it.index }) { preset ->
-                val slotBadge = slotForPreset(preset, presets)
-                val isActive = slotBadge != null && slotBadge == activeSlot
-                val custom = customizations[preset.index]
-                PresetListRow(
-                    number = preset.index + 1,
-                    name = custom?.name ?: preset.name,
-                    accent = preset.color.toColor(),
-                    slotBadge = slotBadge,
-                    isActive = isActive,
-                    // Nomes manuais tem prioridade; sem eles, o preset ATIVO usa o 0x0304
-                    rigLine = manualRigLine(custom)
-                        ?: if (isActive) rigLine(activeAmpEnabled, activeCabLabel) else null,
-                    enabled = !isBusy,
-                    onClick = { onLoadPreset(preset.index) },
-                    onLongClick = if (onSaveCustomization != null) {
-                        { editingPreset = preset }
-                    } else null
-                )
+        if (listMode == PresetListMode.BANK) {
+            val visibleBanks = banks.mapIndexed { index, bank -> index to bank }.filter { (index, bank) ->
+                if (searchQuery.isBlank()) true
+                else {
+                    val id = bankNumber(index)
+                    bank.name.contains(searchQuery, ignoreCase = true) || id.contains(searchQuery)
+                }
+            }
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                item(key = "add-bank") {
+                    TextButton(
+                        onClick = {
+                            editingBank = BankDraft(
+                                index = null,
+                                name = "Bank ${bankNumber(banks.size)}",
+                                presetA = presetIds.getOrElse(0) { 0 }.coerceIn(0, 19),
+                                presetB = presetIds.getOrElse(1) { 1 }.coerceIn(0, 19)
+                            )
+                        },
+                        enabled = !isBusy && banks.size < PresetBankCodec.MAX_BANKS
+                    ) {
+                        Text(stringResource(R.string.bank_add), color = ToneXAccent)
+                    }
+                }
+                if (banks.isEmpty()) {
+                    item(key = "banks-empty") {
+                        Text(
+                            text = stringResource(R.string.bank_empty),
+                            color = ToneXOnSurfaceMuted,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)
+                        )
+                    }
+                }
+                items(visibleBanks, key = { (index, _) -> "bank-$index" }) { (index, bank) ->
+                    val loaded = presetIds.getOrNull(0) == bank.presetA && presetIds.getOrNull(1) == bank.presetB
+                    BankListRow(
+                        number = bankNumber(index),
+                        name = bank.name,
+                        presetAName = presetDisplayName(bank.presetA, libraryPresets, customizations),
+                        presetBName = presetDisplayName(bank.presetB, libraryPresets, customizations),
+                        colorA = presetColor(bank.presetA, libraryPresets),
+                        colorB = presetColor(bank.presetB, libraryPresets),
+                        isLoaded = loaded,
+                        enabled = !isBusy,
+                        onClick = { onApplyBank(bank) },
+                        onLongClick = {
+                            editingBank = BankDraft(index, bank.name, bank.presetA, bank.presetB)
+                        }
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(visiblePresets, key = { it.index }) { preset ->
+                    val slotBadge = slotForPreset(preset, presets)
+                    val isActive = slotBadge != null && slotBadge == activeSlot
+                    val custom = customizations[preset.index]
+                    PresetListRow(
+                        number = preset.index + 1,
+                        name = custom?.name ?: preset.name,
+                        accent = preset.color.toColor(),
+                        slotBadge = slotBadge,
+                        isActive = isActive,
+                        rigLine = manualRigLine(custom)
+                            ?: if (isActive) rigLine(activeAmpEnabled, activeCabLabel) else null,
+                        enabled = !isBusy,
+                        onClick = { onLoadPreset(preset.index) },
+                        onLongClick = if (onSaveCustomization != null) {
+                            { editingPreset = preset }
+                        } else null
+                    )
+                }
             }
         }
     }
@@ -186,6 +287,30 @@ fun PresetsScreen(
                 onSaveCustomization(editing.index, customization)
                 editingPreset = null
             }
+        )
+    }
+
+    val draft = editingBank
+    if (draft != null) {
+        BankEditDialog(
+            draft = draft,
+            libraryPresets = libraryPresets,
+            customizations = customizations,
+            onDismiss = { editingBank = null },
+            onSave = { name, presetA, presetB ->
+                val updated = PresetBank(name = name, presetA = presetA, presetB = presetB)
+                onSaveBanks(
+                    if (draft.index == null) banks + updated
+                    else banks.mapIndexed { index, bank -> if (index == draft.index) updated else bank }
+                )
+                editingBank = null
+            },
+            onDelete = if (draft.index != null) {
+                {
+                    onSaveBanks(banks.filterIndexed { index, _ -> index != draft.index })
+                    editingBank = null
+                }
+            } else null
         )
     }
 }
@@ -408,8 +533,18 @@ private fun SlotBadge(slot: Slot) {
  * decodificamos quais blocos cada preset da biblioteca usa (preset detail 0x0304).
  */
 @Composable
-private fun EffectChipsRow() {
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun EffectChipsRow(prefix: String? = null) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (prefix != null) {
+            Text(
+                text = prefix,
+                style = MonoLabelStyle.copy(fontSize = 10.sp, letterSpacing = 0.4.sp),
+                color = ToneXOnSurfaceMuted
+            )
+        }
         EffectChip("NG", ChipNg)
         EffectChip("AMP", ChipAmp)
         EffectChip("CAB", ChipCab)
@@ -417,6 +552,281 @@ private fun EffectChipsRow() {
         EffectChip("MOD", ChipMod)
         EffectChip("DLY", ChipDly)
         EffectChip("REV", ChipRev)
+    }
+}
+
+private data class BankDraft(
+    val index: Int?,
+    val name: String,
+    val presetA: Int,
+    val presetB: Int
+)
+
+private fun bankNumber(index: Int): String = (index + 1).toString().padStart(2, '0')
+
+private fun presetColor(presetId: Int, libraryPresets: List<LibraryPreset>): Color =
+    libraryPresets.getOrNull(presetId)?.color?.toColor() ?: fallbackPresetColor(presetId).toColor()
+
+private fun presetDisplayName(
+    presetId: Int,
+    libraryPresets: List<LibraryPreset>,
+    customizations: Map<Int, PresetCustomization>
+): String {
+    customizations[presetId]?.name?.takeIf { it.isNotBlank() }?.let { return it }
+    return libraryPresets.getOrNull(presetId)?.name ?: "Preset ${presetId + 1}"
+}
+
+@Composable
+private fun BankSlotDeck(
+    presetIds: List<Int>,
+    libraryPresets: List<LibraryPreset>,
+    customizations: Map<Int, PresetCustomization>,
+    activeSlot: Slot,
+    isBusy: Boolean,
+    onSelectSlot: (Slot) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        listOf(Slot.A, Slot.B).forEach { slot ->
+            val presetId = presetIds.getOrNull(slot.ordinal) ?: 0
+            BankSlotButton(
+                letter = slot.name,
+                name = presetDisplayName(presetId, libraryPresets, customizations),
+                color = presetColor(presetId, libraryPresets),
+                isActive = slot == activeSlot,
+                enabled = !isBusy,
+                modifier = Modifier.weight(1f),
+                onClick = { onSelectSlot(slot) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun BankSlotButton(
+    letter: String,
+    name: String,
+    color: Color,
+    isActive: Boolean,
+    enabled: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isActive) color.copy(alpha = 0.16f) else ToneXSurfaceVariant)
+            .border(
+                width = if (isActive) 2.dp else 1.dp,
+                color = if (isActive) color else Color.White.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(text = letter, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+        Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(color))
+        Text(
+            text = name,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BankListRow(
+    number: String,
+    name: String,
+    presetAName: String,
+    presetBName: String,
+    colorA: Color,
+    colorB: Color,
+    isLoaded: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .clip(RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp))
+            .background(if (isLoaded) ToneXSurfaceVariant else Color.Transparent)
+            .combinedClickable(enabled = enabled, onClick = onClick, onLongClick = onLongClick),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .fillMaxHeight()
+                .background(
+                    Brush.verticalGradient(
+                        0f to colorA,
+                        0.5f to colorA,
+                        0.5f to colorB,
+                        1f to colorB
+                    )
+                )
+        )
+        Column(
+            modifier = Modifier.weight(1f).padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = number,
+                    style = MonoLabelStyle.copy(fontSize = 13.sp, letterSpacing = 0.sp),
+                    color = ToneXOnSurfaceMuted
+                )
+                Text(
+                    text = name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Text(
+                text = presetAName,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            EffectChipsRow(prefix = "A:")
+            Text(
+                text = presetBName,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            EffectChipsRow(prefix = "B:")
+        }
+    }
+}
+
+@Composable
+private fun BankEditDialog(
+    draft: BankDraft,
+    libraryPresets: List<LibraryPreset>,
+    customizations: Map<Int, PresetCustomization>,
+    onDismiss: () -> Unit,
+    onSave: (name: String, presetA: Int, presetB: Int) -> Unit,
+    onDelete: (() -> Unit)?
+) {
+    var name by remember(draft.index, draft.name) { mutableStateOf(draft.name) }
+    var presetA by remember(draft.index, draft.presetA) { mutableStateOf(draft.presetA) }
+    var presetB by remember(draft.index, draft.presetB) { mutableStateOf(draft.presetB) }
+    val options = (0 until 20).map { index ->
+        index to presetDisplayName(index, libraryPresets, customizations)
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = ToneXSurfaceVariant,
+        title = {
+            Text(
+                text = stringResource(if (draft.index == null) R.string.bank_new_title else R.string.bank_edit_title),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.bank_name)) },
+                    singleLine = true
+                )
+                PresetDropdown(
+                    label = stringResource(R.string.bank_preset_a),
+                    selected = presetA,
+                    options = options,
+                    onSelect = { presetA = it }
+                )
+                PresetDropdown(
+                    label = stringResource(R.string.bank_preset_b),
+                    selected = presetB,
+                    options = options,
+                    onSelect = { presetB = it }
+                )
+                Text(
+                    text = stringResource(R.string.bank_edit_hint),
+                    fontSize = 11.sp,
+                    color = ToneXOnSurfaceMuted
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onSave(name.trim().ifEmpty { "Bank" }, presetA, presetB)
+            }) { Text(stringResource(R.string.preset_edit_save), color = ToneXAccent) }
+        },
+        dismissButton = {
+            Row {
+                if (onDelete != null) {
+                    TextButton(onClick = onDelete) {
+                        Text(stringResource(R.string.bank_delete), color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.preset_edit_cancel), color = ToneXOnSurfaceMuted)
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun PresetDropdown(
+    label: String,
+    selected: Int,
+    options: List<Pair<Int, String>>,
+    onSelect: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = options.firstOrNull { it.first == selected }?.let { (index, presetName) ->
+        "${bankNumber(index)}  $presetName"
+    }.orEmpty()
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = selectedLabel,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable { expanded = true }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { (index, presetName) ->
+                DropdownMenuItem(
+                    text = { Text("${bankNumber(index)}  $presetName") },
+                    onClick = {
+                        onSelect(index)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }
 

@@ -92,6 +92,17 @@ class PedalRepository(
         connection.loadPresetToSlot(current.pedal, presetId, slot, selectSlot = true)
     }
 
+    /** Grava os presets de A e B no mesmo frame e deixa o pedal em modo A/B. */
+    suspend fun applyAbBank(presetA: Int, presetB: Int) = operationMutex.withLock {
+        val current = _state.value as? ConnectionState.Connected ?: return
+        recordLocalAction("apply_ab_bank", mapOf("presetA" to presetA, "presetB" to presetB))
+        val updatedPedal = current.pedal.withAbPresets(presetA, presetB)
+        lastConfirmedActiveSlot = updatedPedal.activeSlot
+        stablePresetIds = updatedPedal.presetIds.takeIf { it.isNotEmpty() }
+        _state.value = current.copy(pedal = updatedPedal)
+        connection.assignAbPresets(current.pedal, presetA, presetB)
+    }
+
     suspend fun toggleBypass() = operationMutex.withLock {
         val current = _state.value as? ConnectionState.Connected ?: return
         val newBypass = !current.pedal.bypassMode

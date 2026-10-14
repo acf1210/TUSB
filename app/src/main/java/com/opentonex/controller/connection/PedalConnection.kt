@@ -24,6 +24,8 @@ interface PedalConnection {
     suspend fun selectPreset(presetId: Int)
     /** Carrega [presetId] em [slot], opcionalmente tornando esse slot ativo. */
     suspend fun loadPresetToSlot(currentState: PedalState, presetId: Int, slot: Slot, selectSlot: Boolean)
+    /** Grava o preset de A e o de B no mesmo comando de estado (modo A/B). */
+    suspend fun assignAbPresets(currentState: PedalState, presetA: Int, presetB: Int)
     /** Alterna o modo operacional do pedal (AB <-> STOMP). */
     suspend fun switchMode(currentState: PedalState, targetMode: PedalMode)
     /**

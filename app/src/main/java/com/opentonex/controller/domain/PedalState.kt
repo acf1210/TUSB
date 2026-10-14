@@ -167,6 +167,27 @@ data class PedalState(
         )
     }
 
+    /** Atribui os presets de A e B juntos e deixa o pedal em modo A/B. */
+    fun withAbPresets(presetA: Int, presetB: Int): PedalState {
+        val assigned = withPresetInSlot(presetA, Slot.A, selectSlot = false)
+            .withPresetInSlot(presetB, Slot.B, selectSlot = false)
+        val nextSlot = if (assigned.activeSlot == Slot.C) Slot.A else assigned.activeSlot
+        val updatedRawState = assigned.rawState.copyOf()
+        val responseHeaderLength = 8
+        val bodyLength = updatedRawState.size - responseHeaderLength
+        if (bodyLength > 11) {
+            updatedRawState[responseHeaderLength + bodyLength - 11] = nextSlot.ordinal.toByte()
+            val modeOffset = responseHeaderLength + 19
+            if (modeOffset in updatedRawState.indices) updatedRawState[modeOffset] = 0
+        }
+        return assigned.copy(
+            activeSlot = nextSlot,
+            pedalMode = PedalMode.AB,
+            rawState = updatedRawState,
+            bypassMode = false
+        )
+    }
+
     /**
      * Aplica ao preset ATIVO os floats de parametros extraidos do detalhe 0x0304
      * ([values] indexado pela ordem da tabela tonex_params). So os parametros mapeados

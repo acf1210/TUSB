@@ -83,6 +83,18 @@
     <string name="presets_load_active_slot">loads into active slot</string>
     <string name="presets_active">active</string>
     <string name="presets_search">Search</string>
+    <string name="presets_mode_dual">Dual</string>
+    <string name="presets_mode_stomp">Stomp</string>
+    <string name="presets_mode_bank">Bank</string>
+    <string name="bank_add">New bank</string>
+    <string name="bank_empty">No banks yet. Create one to switch presets A and B together.</string>
+    <string name="bank_new_title">New bank</string>
+    <string name="bank_edit_title">Edit bank</string>
+    <string name="bank_name">Bank name</string>
+    <string name="bank_preset_a">Preset A</string>
+    <string name="bank_preset_b">Preset B</string>
+    <string name="bank_delete">Delete</string>
+    <string name="bank_edit_hint">Saved on this device. Choosing a bank writes presets A and B to the pedal together, in Dual mode.</string>
     <string name="preset_edit_name">Preset name</string>
     <string name="preset_edit_amp">Amp model</string>
     <string name="preset_edit_cab">Cab model</string>
@@ -120,5 +132,7 @@
     <string name="midi_permission_needed">Bluetooth permission is required to scan for MIDI footswitches.</string>
     <string name="midi_not_supported">This device does not support MIDI.</string>
     <string name="midi_pc_note">Program Change 0–19 always loads preset 1–20 (matches M-Vave Chocolate factory default).</string>
+    <string name="midi_pc_bank">PC loads bank</string>
+    <string name="midi_pc_bank_note">Program Change selects a bank (PC 0 = bank 01) and writes presets A and B together. A learned PC still runs its mapped action.</string>
     <string name="midi_cc_none">—</string>
 </resources>

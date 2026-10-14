@@ -37,6 +37,12 @@ class MidiMappingStore(private val storage: KeyValueStore) {
         update(MidiMapping.DEFAULT)
     }
 
+    fun pcSelectsBank(): Boolean = storage.get(PC_BANK_KEY) == "1"
+
+    fun setPcSelectsBank(enabled: Boolean) {
+        storage.put(PC_BANK_KEY, if (enabled) "1" else "0")
+    }
+
     private fun update(mapping: MidiMapping) {
         _mapping.value = mapping
         storage.put(KEY, MidiMappingCodec.encode(mapping))
@@ -44,5 +50,6 @@ class MidiMappingStore(private val storage: KeyValueStore) {
 
     private companion object {
         const val KEY = "midi_mapping"
+        const val PC_BANK_KEY = "midi_pc_selects_bank"
     }
 }

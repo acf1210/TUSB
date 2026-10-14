@@ -458,6 +458,23 @@ class PedalViewModel : ViewModel() {
         }
     }
 
+    fun applyAbBank(presetA: Int, presetB: Int) {
+        if (_busy.value.isBusy) return
+        val repo = repository ?: return
+        viewModelScope.launch {
+            try {
+                setBusy(localText("Trocando banco...", "Switching bank...", "Cambiando banco..."))
+                _error.value = null
+                repo.applyAbBank(presetA, presetB)
+                publishRepositoryState(repo.state.value)
+            } catch (e: Exception) {
+                _error.value = e.message ?: localText("Falha ao trocar banco", "Failed to switch bank", "No se pudo cambiar el banco")
+            } finally {
+                clearBusy()
+            }
+        }
+    }
+
     fun switchMode(targetMode: PedalMode) {
         if (_busy.value.isBusy) return
         val repo = repository ?: return

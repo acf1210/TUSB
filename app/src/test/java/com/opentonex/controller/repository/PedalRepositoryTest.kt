@@ -47,6 +47,9 @@ private class RecordingPedalConnection : PedalConnection {
     override suspend fun loadPresetToSlot(currentState: PedalState, presetId: Int, slot: Slot, selectSlot: Boolean) =
         delegate.loadPresetToSlot(currentState, presetId, slot, selectSlot)
 
+    override suspend fun assignAbPresets(currentState: PedalState, presetA: Int, presetB: Int) =
+        delegate.assignAbPresets(currentState, presetA, presetB)
+
     override suspend fun switchMode(currentState: PedalState, targetMode: PedalMode) =
         delegate.switchMode(currentState, targetMode)
 
@@ -95,6 +98,8 @@ private class DriftingPresetMapConnection : PedalConnection {
     override suspend fun selectPreset(presetId: Int) = Unit
 
     override suspend fun loadPresetToSlot(currentState: PedalState, presetId: Int, slot: Slot, selectSlot: Boolean) = Unit
+
+    override suspend fun assignAbPresets(currentState: PedalState, presetA: Int, presetB: Int) = Unit
 
     override suspend fun switchMode(currentState: PedalState, targetMode: PedalMode) = Unit
 

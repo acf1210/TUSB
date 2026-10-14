@@ -1,7 +1,9 @@
 package com.opentonex.controller.midi
 
 import android.content.Context
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Composicao de todo o subsistema MIDI: store (mapeamento persistido), dispatcher
@@ -18,7 +20,14 @@ class MidiController(
         )
     )
 
-    val dispatcher = MidiCommandDispatcher(handler) { store.mapping.value }
+    private val _pcSelectsBank = MutableStateFlow(store.pcSelectsBank())
+    val pcSelectsBank: StateFlow<Boolean> = _pcSelectsBank.asStateFlow()
+
+    val dispatcher = MidiCommandDispatcher(
+        handler = handler,
+        mappingProvider = { store.mapping.value },
+        pcSelectsBank = { _pcSelectsBank.value }
+    )
 
     private val inputManager = MidiInputManager(context) { messages ->
         messages.forEach(dispatcher::dispatch)
@@ -43,5 +52,10 @@ class MidiController(
     fun startLearn(action: MidiAction) = dispatcher.startLearn(action)
     fun cancelLearn() = dispatcher.cancelLearn()
     fun resetMapping() = store.reset()
+
+    fun setPcSelectsBank(enabled: Boolean) {
+        store.setPcSelectsBank(enabled)
+        _pcSelectsBank.value = enabled
+    }
     fun release() = inputManager.release()
 }

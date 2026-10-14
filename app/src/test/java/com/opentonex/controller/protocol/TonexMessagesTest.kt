@@ -368,6 +368,31 @@ class TonexMessagesStateTest {
         assertArrayEquals(payload.copyOfRange(0, 5) + expectedSuffix + expectedBody, updated)
     }
 
+    @Test fun `buildAssignAbPresetsPayload writes both slots and leaves stomp for dual`() {
+        val payload = syntheticStatePayload(activeSlotByte = 2)
+
+        val updated = TonexMessages.buildAssignAbPresetsPayload(payload, presetA = 4, presetB = 9)
+
+        val body = updated.copyOfRange(11, updated.size)
+        assertEquals(0, body[19].toInt())
+        assertEquals(4, body[body.size - 18].toInt() and 0xFF)
+        assertEquals(0, body[body.size - 17].toInt() and 0xFF)
+        assertEquals(9, body[body.size - 16].toInt() and 0xFF)
+        assertEquals(0, body[body.size - 15].toInt() and 0xFF)
+        assertEquals(0, body[body.size - 12].toInt() and 0xFF)
+        assertEquals(0, body[body.size - 11].toInt() and 0xFF)
+        assertEquals(1, body[body.size - 7].toInt() and 0xFF)
+    }
+
+    @Test fun `buildAssignAbPresetsPayload keeps the active AB slot`() {
+        val payload = syntheticStatePayload(activeSlotByte = 1)
+
+        val updated = TonexMessages.buildAssignAbPresetsPayload(payload, presetA = 1, presetB = 2)
+
+        val body = updated.copyOfRange(11, updated.size)
+        assertEquals(1, body[body.size - 11].toInt() and 0xFF)
+    }
+
     @Test fun `parseState reads active slot from the byte after the constant zero marker`() {
         val payload = syntheticStatePayload(activeSlotByte = 2)
 

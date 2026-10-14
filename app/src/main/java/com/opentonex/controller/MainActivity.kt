@@ -16,6 +16,7 @@ import com.opentonex.controller.midi.MidiController
 import com.opentonex.controller.midi.PedalMidiActionHandler
 import com.opentonex.controller.ui.PedalViewModel
 import com.opentonex.controller.ui.ToneXApp
+import com.opentonex.controller.ui.presets.PresetBankStore
 import com.opentonex.controller.ui.theme.ToneXTheme
 import com.opentonex.controller.usb.UsbSerialTransport
 
@@ -28,9 +29,10 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val bankStore = PresetBankStore(applicationContext)
         val midi = MidiController(
             context = applicationContext,
-            handler = PedalMidiActionHandler(pedalViewModel)
+            handler = PedalMidiActionHandler(pedalViewModel, banks = bankStore::loadAll)
         )
         midiController = midi
         setContent {

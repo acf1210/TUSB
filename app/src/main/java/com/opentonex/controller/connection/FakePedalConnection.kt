@@ -106,6 +106,10 @@ class FakePedalConnection : PedalConnection {
         )
     }
 
+    override suspend fun assignAbPresets(currentState: PedalState, presetA: Int, presetB: Int) {
+        state = state.withAbPresets(presetA, presetB)
+    }
+
     override suspend fun writeParameter(paramIndex: Int, value: Float) {
         parameters[paramIndex] = value
         parameterWriteCounts[paramIndex] = (parameterWriteCounts[paramIndex] ?: 0) + 1

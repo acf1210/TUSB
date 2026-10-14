@@ -74,6 +74,7 @@ import com.opentonex.controller.ui.editor.EditorScreen
 import com.opentonex.controller.ui.editor.EffectDetailScreen
 import com.opentonex.controller.ui.editor.EffectSlotType
 import com.opentonex.controller.ui.menu.MenuScreen
+import com.opentonex.controller.ui.presets.PresetBankStore
 import com.opentonex.controller.ui.presets.PresetCustomizationStore
 import com.opentonex.controller.ui.presets.PresetsScreen
 import com.opentonex.controller.ui.theme.TusbTheme
@@ -178,6 +179,7 @@ fun ToneXApp(
                 menuState = menuState,
                 onSelectSlot = viewModel::selectSlot,
                 onLoadPreset = viewModel::loadPresetToActiveSlot,
+                onApplyAbBank = viewModel::applyAbBank,
                 onSwitchMode = viewModel::switchMode,
                 onToggleBypass = viewModel::toggleBypass,
                 onToggleCabSimBypass = viewModel::toggleCabSimBypass,
@@ -222,6 +224,7 @@ private fun ConnectedApp(
     menuState: MenuUiState,
     onSelectSlot: (Slot) -> Unit,
     onLoadPreset: (Int) -> Unit,
+    onApplyAbBank: (Int, Int) -> Unit,
     onSwitchMode: (PedalMode) -> Unit,
     onToggleBypass: () -> Unit,
     onToggleCabSimBypass: () -> Unit,
@@ -258,7 +261,7 @@ private fun ConnectedApp(
                     }
                 }
                 ConnectedNavHost(
-                    navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
+                    navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onApplyAbBank, onSwitchMode,
                     onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onA4ReferenceChange,
                     onThemeChange, captureState, onRefreshState, onStartCapture, onStopCapture,
                     onDisconnect, midiController, modifier = Modifier.fillMaxSize()
@@ -273,7 +276,7 @@ private fun ConnectedApp(
             }
         ) { padding ->
             ConnectedNavHost(
-                navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
+                navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onApplyAbBank, onSwitchMode,
                 onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onA4ReferenceChange,
                 onThemeChange, captureState, onRefreshState, onStartCapture, onStopCapture,
                 onDisconnect, midiController, modifier = Modifier.fillMaxSize().padding(padding)
@@ -293,6 +296,7 @@ private fun ConnectedNavHost(
     menuState: MenuUiState,
     onSelectSlot: (Slot) -> Unit,
     onLoadPreset: (Int) -> Unit,
+    onApplyAbBank: (Int, Int) -> Unit,
     onSwitchMode: (PedalMode) -> Unit,
     onToggleBypass: () -> Unit,
     onToggleCabSimBypass: () -> Unit,
@@ -316,6 +320,10 @@ private fun ConnectedNavHost(
     val customizationStore = androidx.compose.runtime.remember { PresetCustomizationStore(context) }
     var customizations by androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf(customizationStore.loadAll())
+    }
+    val bankStore = androidx.compose.runtime.remember { PresetBankStore(context) }
+    var banks by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(bankStore.loadAll())
     }
     val activePresetId = pedal.presetIds.getOrNull(pedal.activeSlot.ordinal)
     val activeCustom = activePresetId?.let { customizations[it] }
@@ -363,7 +371,9 @@ private fun ConnectedNavHost(
                 pedalMode = pedal.pedalMode,
                 bypassMode = pedal.bypassMode,
                 presets = pedal.slots,
+                presetIds = pedal.presetIds,
                 libraryPresets = pedal.libraryPresets,
+                banks = banks,
                 isBusy = busyState.isBusy,
                 activeCabLabel = pedal.rigModels().let { rig ->
                     if (rig.cabinetType == null && !pedal.cabSimBypass) null
@@ -377,6 +387,11 @@ private fun ConnectedNavHost(
                 },
                 onSelectSlot = onSelectSlot,
                 onLoadPreset = onLoadPreset,
+                onApplyBank = { bank -> onApplyAbBank(bank.presetA, bank.presetB) },
+                onSaveBanks = { updated ->
+                    bankStore.saveAll(updated)
+                    banks = bankStore.loadAll()
+                },
                 onSwitchMode = onSwitchMode,
                 onToggleBypass = onToggleBypass
             )

@@ -38,4 +38,17 @@ class FakePedalConnectionTest {
 
         assertEquals(Slot.C, conn.requestState().activeSlot)
     }
+
+    @Test fun `assignAbPresets writes both slot ids and stays in AB`() = runTest {
+        val conn = FakePedalConnection()
+        conn.connect()
+        val state = conn.requestState()
+
+        conn.assignAbPresets(state, presetA = 4, presetB = 9)
+
+        val updated = conn.requestState()
+        assertEquals(listOf(4, 9, 0x07), updated.presetIds)
+        assertEquals(com.opentonex.controller.domain.PedalMode.AB, updated.pedalMode)
+        assertEquals(Slot.A, updated.activeSlot)
+    }
 }

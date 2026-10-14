@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -56,6 +57,7 @@ fun MidiTab(controller: MidiController?) {
     val mapping by controller.mapping.collectAsStateWithLifecycle()
     val learnTarget by controller.learnTarget.collectAsStateWithLifecycle()
     val lastMessage by controller.lastMessage.collectAsStateWithLifecycle()
+    val pcSelectsBank by controller.pcSelectsBank.collectAsStateWithLifecycle()
     var permissionDenied by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -167,8 +169,23 @@ fun MidiTab(controller: MidiController?) {
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.midi_pc_bank),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = pcSelectsBank,
+                    onCheckedChange = controller::setPcSelectsBank
+                )
+            }
             Text(
-                text = stringResource(R.string.midi_pc_note),
+                text = stringResource(if (pcSelectsBank) R.string.midi_pc_bank_note else R.string.midi_pc_note),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

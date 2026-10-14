@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 interface MidiActionHandler {
     fun selectSlot(slot: Slot)
     fun loadPreset(presetId: Int)
+    /** PC n, quando a opção de banco está ligada, aplica o banco na posição [index]. */
+    fun applyBank(index: Int)
     fun activePresetId(): Int?
     fun toggleBypass()
     fun toggleCab()
@@ -20,12 +22,14 @@ interface MidiActionHandler {
 
 /**
  * Traduz mensagens MIDI parseadas em acoes do app usando o mapping corrente.
- * PC n carrega o preset n (fixo). CCs consultam o mapping. Deve ser chamado na
- * main thread (MidiInputManager posta os callbacks nela).
+ * PC n carrega o preset n, salvo quando [pcSelectsBank] está ligado: aí o PC n
+ * aplica o banco n (A+B). Um PC aprendido no mapa continua ganhando. CCs consultam
+ * o mapping. Deve ser chamado na main thread (MidiInputManager posta os callbacks nela).
  */
 class MidiCommandDispatcher(
     private val handler: MidiActionHandler,
-    private val mappingProvider: () -> MidiMapping
+    private val mappingProvider: () -> MidiMapping,
+    private val pcSelectsBank: () -> Boolean = { false }
 ) {
     /** Acao armada para MIDI Learn; null quando desarmado. */
     private val _learnTarget = MutableStateFlow<MidiAction?>(null)
@@ -61,8 +65,10 @@ class MidiCommandDispatcher(
         when (message) {
             is MidiMessage.ProgramChange -> {
                 val action = mappingProvider().actionFor(programChangeKey(message.program))
-                if (action != null) perform(action, 127) else if (message.program in 0 until PRESET_COUNT) {
-                    handler.loadPreset(message.program)
+                when {
+                    action != null -> perform(action, 127)
+                    pcSelectsBank() -> handler.applyBank(message.program)
+                    message.program in 0 until PRESET_COUNT -> handler.loadPreset(message.program)
                 }
             }
             is MidiMessage.ControlChange -> {

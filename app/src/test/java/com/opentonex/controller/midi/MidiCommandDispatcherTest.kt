@@ -13,6 +13,7 @@ private class FakeHandler : MidiActionHandler {
     var activePreset: Int? = 4
     override fun selectSlot(slot: Slot) { calls += "slot:${slot.name}" }
     override fun loadPreset(presetId: Int) { calls += "preset:$presetId" }
+    override fun applyBank(index: Int) { calls += "bank:$index" }
     override fun activePresetId(): Int? = activePreset
     override fun toggleBypass() { calls += "bypass" }
     override fun toggleCab() { calls += "cab" }
@@ -23,7 +24,7 @@ private class FakeHandler : MidiActionHandler {
 class MidiCommandDispatcherTest {
 
     private fun dispatcher(handler: FakeHandler, mapping: MidiMapping = MidiMapping.DEFAULT) =
-        MidiCommandDispatcher(handler) { mapping }
+        MidiCommandDispatcher(handler, mappingProvider = { mapping })
 
     @Test
     fun `program change loads preset`() {
@@ -133,6 +134,23 @@ class MidiCommandDispatcherTest {
         assertEquals(MidiAction.TOGGLE_CAB to programChangeKey(3), learned)
         assertNull(d.learnTarget.value)
         assertTrue(handler.calls.isEmpty())
+    }
+
+    @Test
+    fun `program change loads bank when bank mode is on`() {
+        val handler = FakeHandler()
+        MidiCommandDispatcher(handler, { MidiMapping.DEFAULT }, pcSelectsBank = { true })
+            .dispatch(MidiMessage.ProgramChange(0, 2))
+        assertEquals(listOf("bank:2"), handler.calls)
+    }
+
+    @Test
+    fun `mapped program change still wins when bank mode is on`() {
+        val handler = FakeHandler()
+        val mapping = MidiMapping.DEFAULT.withLearned(MidiAction.TOGGLE_BYPASS, programChangeKey(3))
+        MidiCommandDispatcher(handler, { mapping }, pcSelectsBank = { true })
+            .dispatch(MidiMessage.ProgramChange(0, 3))
+        assertEquals(listOf("bypass"), handler.calls)
     }
 
     @Test

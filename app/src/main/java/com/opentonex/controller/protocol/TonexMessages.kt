@@ -381,11 +381,7 @@ object TonexMessages {
         return rebuildStateCommand(rawState) { body ->
             body[STOMP_MODE_BODY_OFFSET] = if (slot == Slot.C) 1 else 0
             if (body.size > BYPASS_MODE_END_OFFSET) body[body.size - BYPASS_MODE_END_OFFSET] = 0
-
-            val presetOffset = body.size - slotPresetEndOffset(slot)
-            require(presetOffset in body.indices) { "offset de preset fora do StateData" }
-            body[presetOffset] = presetId.toByte()
-            if (presetOffset + 1 in body.indices) body[presetOffset + 1] = 0
+            writeSlotPreset(body, slot, presetId)
 
             if (selectSlot) {
                 val activeSlotOffset = body.size - CURRENT_SLOT_END_OFFSET
@@ -393,6 +389,36 @@ object TonexMessages {
                 body[activeSlotOffset] = slotToByte(slot).toByte()
             }
         }
+    }
+
+    /**
+     * Grava o preset de A e o de B no mesmo StateData (modo A/B). O ToneX One não tem
+     * banco: um comando só atualiza os dois ids. O slot ativo permanece, salvo se era C
+     * (Stomp), caso em que passa para A.
+     */
+    fun buildAssignAbPresetsPayload(rawState: ByteArray, presetA: Int, presetB: Int): ByteArray {
+        require(presetA in 0 until 20) { "preset A fora de 0..19: $presetA" }
+        require(presetB in 0 until 20) { "preset B fora de 0..19: $presetB" }
+        require(rawState.size > STATE_RESPONSE_HEADER_LENGTH) { "rawState curto demais para conter StateData" }
+        return rebuildStateCommand(rawState) { body ->
+            if (STOMP_MODE_BODY_OFFSET in body.indices) body[STOMP_MODE_BODY_OFFSET] = 0
+            if (body.size > BYPASS_MODE_END_OFFSET) body[body.size - BYPASS_MODE_END_OFFSET] = 0
+            writeSlotPreset(body, Slot.A, presetA)
+            writeSlotPreset(body, Slot.B, presetB)
+            val activeSlotOffset = body.size - CURRENT_SLOT_END_OFFSET
+            if (activeSlotOffset in body.indices &&
+                (body[activeSlotOffset].toInt() and 0xFF) == slotToByte(Slot.C)
+            ) {
+                body[activeSlotOffset] = slotToByte(Slot.A).toByte()
+            }
+        }
+    }
+
+    private fun writeSlotPreset(body: ByteArray, slot: Slot, presetId: Int) {
+        val presetOffset = body.size - slotPresetEndOffset(slot)
+        require(presetOffset in body.indices) { "offset de preset fora do StateData" }
+        body[presetOffset] = presetId.toByte()
+        if (presetOffset + 1 in body.indices) body[presetOffset + 1] = 0
     }
 
     // --- StateResponse: offsets calibrados contra captura real do pedal
