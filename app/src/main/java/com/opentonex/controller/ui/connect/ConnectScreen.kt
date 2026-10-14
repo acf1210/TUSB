@@ -62,6 +62,7 @@ fun ConnectScreen(
     errorMessage: String?,
     onConnectReal: () -> Unit,
     onConnectFake: () -> Unit,
+    onBrowseToneNet: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -153,6 +154,16 @@ fun ConnectScreen(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .clickable(enabled = !isBusy, onClick = onConnectFake)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+            Text(
+                text = stringResource(R.string.connect_tonenet),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = ToneXAccent,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onBrowseToneNet)
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             )
             Text(

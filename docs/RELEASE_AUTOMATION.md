@@ -15,8 +15,8 @@ repository security review before publishing the release.
    artefatos de engenharia reversa do app oficial (proprietarios, nunca publicar).
 4. So publicar a release depois que os itens acima passarem.
 
-Ultima revisao: v1.0.5 (2026-07-11) — repositorio limpo, sem segredos versionados nem no
-historico.
+Ultima revisao: v1.0.6 (2026-10-14) — sem segredos ou arquivos de build sensiveis versionados
+no commit desta release ou no historico Git.
 
 ---
 

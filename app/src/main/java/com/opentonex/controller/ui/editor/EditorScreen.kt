@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.opentonex.controller.R
 import com.opentonex.controller.domain.PresetSlot
-import com.opentonex.controller.domain.Rgb
 import com.opentonex.controller.domain.RigModels
 import com.opentonex.controller.domain.Slot
 import com.opentonex.controller.ui.AmpKnob
@@ -100,8 +99,8 @@ fun EditorScreen(
     modifier: Modifier = Modifier
 ) {
     val cabLabel = cabNameOverride ?: rigModels.cabLabel(cabSimBypass)
-    // Acento do Editor segue a cor do preset ativo (LED do pedal), como no app oficial.
-    val accent = activePreset?.color?.toColor() ?: ToneXAccent
+    // O editor oficial usa o mesmo acento âmbar para os controles em todos os slots.
+    val accent = ToneXAccent
     // Em tablets o conteudo fica centrado com largura maxima (nao esticado de ponta a ponta).
     Box(
         modifier = modifier.fillMaxSize().tusbBackground(),
@@ -398,7 +397,6 @@ private fun AmpKnobControl(
     )
 }
 
-private fun Rgb.toColor(): Color = Color(r, g, b)
 
 @Composable
 private fun BusyStatusBanner(busyReason: String) {

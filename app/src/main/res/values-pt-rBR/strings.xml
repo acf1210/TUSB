@@ -3,6 +3,14 @@
     <string name="app_name">TUSB</string>
     <string name="nav_editor">Editor</string>
     <string name="nav_presets">Presets</string>
+    <string name="nav_tonenet">ToneNET</string>
+    <string name="connect_tonenet">Explorar ToneNET sem conectar o pedal</string>
+    <string name="tonenet_subtitle">Explore Tone Models e presets da comunidade</string>
+    <string name="tonenet_reload">Recarregar ToneNET</string>
+    <string name="tonenet_loading">Carregando ToneNET…</string>
+    <string name="tonenet_error">Não foi possível carregar o ToneNET. Verifique a conexão e tente novamente.</string>
+    <string name="tonenet_retry">Tentar novamente</string>
+    <string name="back">Voltar</string>
     <string name="nav_tools">Ferramentas</string>
     <string name="nav_menu">Menu</string>
     <string name="status_waiting_usb">Aguardando ToneX One via USB-C...</string>

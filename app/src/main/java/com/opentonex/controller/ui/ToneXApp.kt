@@ -17,10 +17,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
@@ -32,6 +33,8 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,24 +78,27 @@ import com.opentonex.controller.ui.presets.PresetCustomizationStore
 import com.opentonex.controller.ui.presets.PresetsScreen
 import com.opentonex.controller.ui.theme.TusbTheme
 import com.opentonex.controller.ui.tools.ToolsScreen
+import com.opentonex.controller.ui.tonenet.ToneNetScreen
 
 private enum class TopLevelDestination(val route: String, @StringRes val labelRes: Int) {
     EDITOR("editor", R.string.nav_editor),
     PRESETS("presets", R.string.nav_presets),
+    TONENET("tonenet", R.string.nav_tonenet),
     TOOLS("tools", R.string.nav_tools),
     MENU("menu", R.string.nav_menu)
 }
 
 private fun TopLevelDestination.icon() = when (this) {
     TopLevelDestination.EDITOR -> Icons.Filled.Tune
-    TopLevelDestination.PRESETS -> Icons.Filled.ViewList
+    TopLevelDestination.PRESETS -> Icons.AutoMirrored.Filled.ViewList
+    TopLevelDestination.TONENET -> Icons.Filled.Cloud
     TopLevelDestination.TOOLS -> Icons.Filled.Build
     TopLevelDestination.MENU -> Icons.Filled.Menu
 }
 
 @Composable
 private fun TopBrandBar(firmwareVersion: String? = null) {
-    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
+    Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -133,6 +139,7 @@ fun ToneXApp(
     midiController: MidiController? = null,
     viewModel: PedalViewModel = viewModel()
 ) {
+    var browseToneNetWhileDisconnected by remember { mutableStateOf(false) }
     val connectionState by viewModel.state.collectAsStateWithLifecycle()
     val errorMessage by viewModel.error.collectAsStateWithLifecycle()
     val captureState by viewModel.capture.collectAsStateWithLifecycle()
@@ -144,12 +151,15 @@ fun ToneXApp(
     // Captura de log NAO inicia automaticamente: fica parada por padrao e so'
     // e' ligada manualmente pelo usuario na aba Menu.
     when (val current = connectionState) {
-        ConnectionState.Disconnected -> ConnectScreen(
+        ConnectionState.Disconnected -> if (browseToneNetWhileDisconnected) {
+            ToneNetScreen(onBack = { browseToneNetWhileDisconnected = false })
+        } else ConnectScreen(
             statusMessage = busyState.busyReason ?: stringResource(R.string.status_waiting_usb),
             isBusy = busyState.isBusy,
             errorMessage = errorMessage,
             onConnectReal = { viewModel.connectReal(onCreateRealConnection) },
-            onConnectFake = { viewModel.connectWith(onCreateFakeConnection()) }
+            onConnectFake = { viewModel.connectWith(onCreateFakeConnection()) },
+            onBrowseToneNet = { browseToneNetWhileDisconnected = true }
         )
         is ConnectionState.Connected -> Box(modifier = Modifier.fillMaxSize()) {
             ConnectedApp(
@@ -372,6 +382,7 @@ private fun ConnectedNavHost(
             )
         }
         composable(TopLevelDestination.TOOLS.route) { ToolsScreen() }
+        composable(TopLevelDestination.TONENET.route) { ToneNetScreen() }
         composable(TopLevelDestination.MENU.route) {
             MenuScreen(
                 firmwareVersion = firmwareVersion,
