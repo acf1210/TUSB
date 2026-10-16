@@ -27,7 +27,7 @@
 ## Verification
 
 - Android unit tests: `testDebugUnitTest` (135 tests).
-- Physical ToneX One metadata synchronization still needs confirmation after installation on the user's phone.
+- Physical validation on a Samsung SM-S911B connected to ToneX One (serial 200660): the app connects and shows the pedal slots, but the library still displays `nome não sincronizado` for presets 01 and 02. Metadata synchronization is not confirmed and remains a release-blocking defect.
 - APK: `release/TUSB-v1.0.7-debug.apk` (20.82 MiB; 21,826,417 bytes).
 - SHA-256: `c093cfacbeead94a2fb15f7bb5f63100bbb6e97a438ede42a6852ccc97a04935`.
 - VirusTotal: [no security vendors flagged the file](https://www.virustotal.com/gui/file/c093cfacbeead94a2fb15f7bb5f63100bbb6e97a438ede42a6852ccc97a04935); some engines could not process the APK file type.
