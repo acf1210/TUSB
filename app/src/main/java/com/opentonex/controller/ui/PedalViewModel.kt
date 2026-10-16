@@ -458,6 +458,34 @@ class PedalViewModel : ViewModel() {
         }
     }
 
+    /** Apply a TUSB local snapshot to pedal RAM; the device has no confirmed permanent-save command. */
+    fun applyLocalPreset(parameters: List<Float>) {
+        if (_busy.value.isBusy) return
+        val repo = repository ?: run {
+            _error.value = localText("Conecte o pedal para aplicar um preset local", "Connect the pedal to apply a local preset", "Conecta el pedal para aplicar un preset local")
+            return
+        }
+        if (parameters.size != TonexParam.TABLE_SIZE || parameters.any { !it.isFinite() }) {
+            _error.value = localText("Snapshot inválido: são necessários ${TonexParam.TABLE_SIZE} parâmetros válidos", "Invalid snapshot: ${TonexParam.TABLE_SIZE} valid parameters are required", "Snapshot no válido: se requieren ${TonexParam.TABLE_SIZE} parámetros válidos")
+            return
+        }
+        viewModelScope.launch {
+            try {
+                setBusy(localText("Aplicando preset local à memória do pedal...", "Applying local preset to pedal memory...", "Aplicando preset local a la memoria del pedal..."))
+                _error.value = null
+                repo.applyParameterSnapshot(parameters)
+                publishRepositoryState(repo.state.value)
+            } catch (e: Exception) {
+                // Writes are individual protocol messages; re-read device state after a partial failure.
+                runCatching { repo.refreshState() }
+                publishRepositoryState(repo.state.value)
+                _error.value = e.message ?: localText("Falha ao aplicar preset local", "Failed to apply local preset", "No se pudo aplicar el preset local")
+            } finally {
+                clearBusy()
+            }
+        }
+    }
+
     fun switchMode(targetMode: PedalMode) {
         if (_busy.value.isBusy) return
         val repo = repository ?: return

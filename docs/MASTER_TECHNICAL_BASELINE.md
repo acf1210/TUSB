@@ -107,7 +107,7 @@ Documentacao e engenharia reversa:
   ESP32 open-source ativamente mantido, suporta firmware 1.2.x+ do pedal) — segunda
   validacao independente: confirma Hello/wake, RequestState canonico (15B), baud 115200,
   offsets de slot/preset e a estrategia de reescrita completa do StateData; a tabela de
-  106 parametros de `tonex_params.c` serve de referencia de ranges para o editor. Ver
+  109 parametros (indices 0..108) de `tonex_params.c` serve de referencia de ranges para o editor. Ver
   secao "Validacao cruzada com segunda referencia" em `docs/protocol-notes.md`.
 - `docs/superpowers/specs/2026-06-24-tonex-one-v1-android-controller-design.md`
 - `docs/superpowers/specs/2026-06-25-tonex-runtime-events-jsonl-capture-design.md`

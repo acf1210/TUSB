@@ -132,6 +132,27 @@ class PedalViewModelTest {
         assertEquals(1, fake.parameterWriteCounts[20])
     }
 
+    @Test fun `applyLocalPreset writes all captured parameters to the connected pedal`() = runTest {
+        val fake = FakePedalConnection()
+        val viewModel = PedalViewModel()
+        val values = com.opentonex.controller.ui.presets.PresetParameterRanges.safeSample()
+        viewModel.connectWith(fake)
+        advanceUntilIdle()
+
+        viewModel.applyLocalPreset(values)
+        advanceUntilIdle()
+
+        assertEquals(values.indices.toSet(), fake.parameters.keys)
+        assertEquals(values, (viewModel.state.value as ConnectionState.Connected).pedal.presetParameters)
+    }
+
+    @Test fun `applyLocalPreset reports disconnected state and does not write`() = runTest {
+        val viewModel = PedalViewModel()
+        viewModel.applyLocalPreset(com.opentonex.controller.ui.presets.PresetParameterRanges.safeSample())
+
+        assertTrue(viewModel.error.value?.isNotBlank() == true)
+    }
+
     @Test fun `updateAmpKnob writes captured hardware volume parameter`() = runTest {
         val fake = FakePedalConnection()
         val viewModel = PedalViewModel()

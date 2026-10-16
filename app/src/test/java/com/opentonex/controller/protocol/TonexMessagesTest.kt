@@ -126,11 +126,20 @@ class TonexMessagesTest {
         )
     }
 
-    @Test fun `select preset payloads emits arm then commit in order`() {
-        val frames = TonexMessages.selectPresetPayloads(0x07)
-        assertEquals(2, frames.size)
-        assertEquals(TonexMessages.PRESET_PHASE_ARM, frames[0].last().toInt())
-        assertEquals(TonexMessages.PRESET_PHASE_COMMIT, frames[1].last().toInt())
+    @Test fun `metadata sweep requests all twenty IDs with ARM phase only`() {
+        val payloads = TonexMessages.presetMetadataSweepPayloads()
+        assertEquals(TonexMessages.PEDAL_LIBRARY_PRESET_COUNT, payloads.size)
+        payloads.forEachIndexed { id, payload ->
+            assertEquals(TonexMessages.PRESET_SELECT_TYPE, TonexMessages.messageType(payload))
+            assertEquals(id, payload[payload.lastIndex - 1].toInt() and 0xFF)
+            assertEquals(TonexMessages.PRESET_PHASE_ARM, payload.last().toInt())
+        }
+    }
+
+    @Test fun `metadata request rejects IDs outside pedal library`() {
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            TonexMessages.requestPresetMetadataPayload(20)
+        }
     }
 
     @Test fun `raw preset select payload matches usb reference firmware command`() {
@@ -267,6 +276,12 @@ class TonexMessagesStateTest {
         assertEquals(true, state.cabSimBypass)
     }
 
+    @Test fun `parseState does not invent preset names from color metadata`() {
+        val state = TonexMessages.parseState(syntheticStatePayload(activeSlotByte = 0), fieldsOffset = 22)
+        assertEquals(TonexMessages.PEDAL_LIBRARY_PRESET_COUNT, state.libraryPresets.size)
+        org.junit.Assert.assertTrue(state.libraryPresets.all { !it.hasDeviceName })
+    }
+
     @Test fun `parseState decodes stomp mode byte`() {
         val payload = syntheticStatePayload(activeSlotByte = 1)
         payload[27] = 1
@@ -292,6 +307,8 @@ class TonexMessagesStateTest {
         assertEquals("Preset A", updated.slots[0].name)
         assertEquals("Crunch Deluxe", updated.slots[1].name)
         assertEquals("Preset C", updated.slots[2].name)
+        assertEquals("Crunch Deluxe", updated.libraryPresets[0x08].name)
+        org.junit.Assert.assertTrue(updated.libraryPresets[0x08].hasDeviceName)
     }
 
     @Test fun `buildSetStatePayload mutates only the active slot byte`() {

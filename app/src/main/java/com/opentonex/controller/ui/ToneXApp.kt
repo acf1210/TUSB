@@ -193,6 +193,7 @@ fun ToneXApp(
                 onStartCapture = { viewModel.startCapture(onResolveCaptureDirectory()) },
                 onStopCapture = viewModel::stopCapture,
                 onDisconnect = viewModel::disconnect,
+                onApplyLocalPreset = viewModel::applyLocalPreset,
                 midiController = midiController
             )
             val currentError = errorMessage
@@ -237,6 +238,7 @@ private fun ConnectedApp(
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
     onDisconnect: () -> Unit,
+    onApplyLocalPreset: (List<Float>) -> Unit,
     midiController: MidiController? = null
 ) {
     val navController = rememberNavController()
@@ -261,7 +263,7 @@ private fun ConnectedApp(
                     navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
                     onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onA4ReferenceChange,
                     onThemeChange, captureState, onRefreshState, onStartCapture, onStopCapture,
-                    onDisconnect, midiController, modifier = Modifier.fillMaxSize()
+                    onDisconnect, midiController, onApplyLocalPreset = onApplyLocalPreset, modifier = Modifier.fillMaxSize()
                 )
             }
         }
@@ -276,7 +278,7 @@ private fun ConnectedApp(
                 navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
                 onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onA4ReferenceChange,
                 onThemeChange, captureState, onRefreshState, onStartCapture, onStopCapture,
-                onDisconnect, midiController, modifier = Modifier.fillMaxSize().padding(padding)
+                onDisconnect, midiController, onApplyLocalPreset = onApplyLocalPreset, modifier = Modifier.fillMaxSize().padding(padding)
             )
         }
     }
@@ -309,6 +311,7 @@ private fun ConnectedNavHost(
     onStopCapture: () -> Unit,
     onDisconnect: () -> Unit,
     midiController: MidiController? = null,
+    onApplyLocalPreset: (List<Float>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Apelidos e nomes manuais de amp/cab por preset (persistencia local ao aparelho).
@@ -371,6 +374,8 @@ private fun ConnectedNavHost(
                 },
                 activeAmpEnabled = pedal.rigModels().ampEnabled,
                 customizations = customizations,
+                activeParameters = pedal.presetParameters,
+                onApplyLocalPreset = onApplyLocalPreset,
                 onSaveCustomization = { index, customization ->
                     customizationStore.save(index, customization)
                     customizations = customizationStore.loadAll()

@@ -14,13 +14,20 @@ import org.junit.Test
 
 private class FakePedalTransport : PedalTransport {
     val written = mutableListOf<ByteArray>()
-    var nextFrame: ByteArray = ByteArray(0)
+    private var fallbackFrame: ByteArray = ByteArray(0)
+    private var fallbackAvailable = false
+    var nextFrame: ByteArray
+        get() = fallbackFrame
+        set(value) { fallbackFrame = value; fallbackAvailable = true }
     val pendingFrames = mutableListOf<ByteArray>()
     var opened = false
     var closed = false
     /** Simula a porta "fria": as primeiras N leituras estouram timeout (pedal mudo). */
     var failReadsBeforeSuccess = 0
     private var failedReads = 0
+    var failNextReads = 0
+    var failAfterSuccessfulReads = 0
+    private var successfulReads = 0
 
     val directWritten = mutableListOf<ByteArray>()
 
@@ -32,9 +39,28 @@ private class FakePedalTransport : PedalTransport {
             failedReads++
             throw PedalTransportTimeoutException("sem resposta (mudo) na leitura $failedReads")
         }
-        return if (pendingFrames.isNotEmpty()) pendingFrames.removeAt(0) else nextFrame
+        if (successfulReads >= failAfterSuccessfulReads && failNextReads > 0) {
+            failNextReads--
+            throw PedalTransportTimeoutException("sem resposta no transporte de teste")
+        }
+        if (pendingFrames.isNotEmpty()) return pendingFrames.removeAt(0).also { successfulReads++ }
+        if (fallbackAvailable) {
+            fallbackAvailable = false
+            successfulReads++
+            return fallbackFrame
+        }
+        throw PedalTransportTimeoutException("sem resposta no transporte de teste")
     }
     override suspend fun close() { closed = true }
+}
+
+private fun presetDetailFrame(name: String): ByteArray {
+    val bytes = name.toByteArray(Charsets.US_ASCII)
+    val payload = byteArrayOf(
+        0xB9.toByte(), 0x03, 0x81.toByte(), 0x04, 0x03, 0x00, 0x00,
+        0xBC.toByte(), bytes.size.toByte()
+    ) + bytes
+    return HdlcCodec.encode(payload)
 }
 
 /** Frame de resposta ao wake (tipo 0x0B2B), como visto na captura real do app oficial. */
@@ -78,31 +104,77 @@ class UsbPedalConnectionTest {
         val transport = FakePedalTransport()
         // Sequencia real: wake -> resposta 0x0B2B; Hello -> resposta 0x0306 com o estado.
         transport.pendingFrames.add(wakeResponseFrame())
-        transport.nextFrame = HdlcCodec.encode(syntheticStatePayload(activeSlotByte = 1))
+        transport.pendingFrames.add(HdlcCodec.encode(syntheticStatePayload(activeSlotByte = 1)))
+        repeat(TonexMessages.PEDAL_LIBRARY_PRESET_COUNT) { transport.pendingFrames.add(presetDetailFrame("Preset $it")) }
         val connection = UsbPedalConnection(transport)
 
         val handshake = connection.handshake()
 
         assertEquals(Slot.B, handshake.state.activeSlot)
         assertTrue(handshake.firmware.version.isNotBlank())
-        // Dois writes: o wake primeiro (acorda o pedal), depois o Hello.
-        assertEquals(2, transport.written.size)
+        // Wake + Hello, seguidos pelos vinte pedidos ARM de metadados.
+        assertEquals(2 + TonexMessages.PEDAL_LIBRARY_PRESET_COUNT, transport.written.size)
         assertArrayEquals(HdlcCodec.encode(TonexMessages.wakePayload()), transport.written[0])
         assertArrayEquals(HdlcCodec.encode(TonexMessages.helloPayload()), transport.written[1])
+        transport.written.drop(2).forEachIndexed { id, payload ->
+            assertArrayEquals(HdlcCodec.encode(TonexMessages.requestPresetMetadataPayload(id)), payload)
+        }
+    }
+
+    @Test fun `handshake imports real preset names without changing active state`() = runTest {
+        val transport = FakePedalTransport()
+        val rawState = syntheticStatePayload(activeSlotByte = 1)
+        transport.pendingFrames += wakeResponseFrame()
+        transport.pendingFrames += HdlcCodec.encode(rawState)
+        val names = (0 until TonexMessages.PEDAL_LIBRARY_PRESET_COUNT).map { id -> "Pedal Tone $id" }
+        names.forEach { transport.pendingFrames += presetDetailFrame(it) }
+        val connection = UsbPedalConnection(transport)
+
+        val result = connection.handshake().state
+
+        assertEquals(names, result.libraryPresets.map { it.name })
+        assertTrue(result.libraryPresets.all { it.hasDeviceName })
+        assertArrayEquals(rawState, result.rawState)
+        assertEquals(listOf(0x0C, 0x08, 0x07), result.presetIds)
+        assertEquals(Slot.B, result.activeSlot)
+        assertEquals("Preset B", result.slots[Slot.B.ordinal].name)
+    }
+
+    @Test fun `handshake skips an empty first library entry and syncs later preset names`() = runTest {
+        val transport = FakePedalTransport()
+        val initialState = syntheticStatePayload(activeSlotByte = 1)
+        transport.pendingFrames += wakeResponseFrame()
+        transport.pendingFrames += HdlcCodec.encode(initialState)
+        transport.failNextReads = 1 // ID 0 is empty and does not answer its ARM metadata request.
+        transport.failAfterSuccessfulReads = 2 // Wake and Hello already received their responses.
+        transport.pendingFrames += HdlcCodec.encode(initialState) // StateRequest FIFO barrier.
+        val names = (1 until TonexMessages.PEDAL_LIBRARY_PRESET_COUNT).map { id -> "Pedal Tone $id" }
+        names.forEach { transport.pendingFrames += presetDetailFrame(it) }
+        val connection = UsbPedalConnection(transport)
+
+        val result = connection.handshake().state
+
+        assertEquals("Preset 01", result.libraryPresets[0].name)
+        assertTrue(!result.libraryPresets[0].hasDeviceName)
+        assertEquals(names, result.libraryPresets.drop(1).map { it.name })
+        assertTrue(result.libraryPresets.drop(1).all { it.hasDeviceName })
+        assertArrayEquals(initialState, result.rawState)
+        assertEquals(Slot.B, result.activeSlot)
     }
 
     @Test fun `handshake retries the wake on a cold port until the pedal responds`() = runTest {
         val transport = FakePedalTransport()
         transport.failReadsBeforeSuccess = 2 // porta fria: 2 wakes ignorados, o 3o acorda o pedal
         transport.pendingFrames.add(wakeResponseFrame())
-        transport.nextFrame = HdlcCodec.encode(syntheticStatePayload(activeSlotByte = 1))
+        transport.pendingFrames.add(HdlcCodec.encode(syntheticStatePayload(activeSlotByte = 1)))
+        repeat(TonexMessages.PEDAL_LIBRARY_PRESET_COUNT) { transport.pendingFrames.add(presetDetailFrame("Preset $it")) }
         val connection = UsbPedalConnection(transport)
 
         val handshake = connection.handshake()
 
         assertEquals(Slot.B, handshake.state.activeSlot)
-        // 2 wakes mudos + (wake+hello que respondem) = 4 writes numa unica conexao.
-        assertEquals(4, transport.written.size)
+        // 2 wakes mudos + wake/hello + os pedidos de metadados.
+        assertEquals(4 + TonexMessages.PEDAL_LIBRARY_PRESET_COUNT, transport.written.size)
     }
 
     @Test fun `handshake gives up after the maximum number of attempts`() = runTest {

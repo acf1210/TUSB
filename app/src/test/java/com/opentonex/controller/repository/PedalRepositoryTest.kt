@@ -52,10 +52,12 @@ private class RecordingPedalConnection : PedalConnection {
 
     override suspend fun writeParameter(paramIndex: Int, value: Float) {
         writtenParameters[paramIndex] = value
+        writeOrder += paramIndex
         delegate.writeParameter(paramIndex, value)
     }
 
     val writtenParameters = mutableMapOf<Int, Float>()
+    val writeOrder = mutableListOf<Int>()
 
     override suspend fun disconnect() = delegate.disconnect()
 }
@@ -144,6 +146,32 @@ class PedalRepositoryTest {
         advanceUntilIdle()
         val s = repo.state.value as ConnectionState.Connected
         assertEquals(Slot.C, s.pedal.activeSlot)
+        repo.disconnect()
+    }
+
+    @Test fun `applies a complete local preset through parameter writes`() = runTest {
+        val connection = RecordingPedalConnection()
+        val repo = PedalRepository(connection, this)
+        val values = com.opentonex.controller.ui.presets.PresetParameterRanges.safeSample()
+        repo.connect()
+
+        repo.applyParameterSnapshot(values)
+
+        assertEquals(values.indices.toSet(), connection.writtenParameters.keys)
+        assertEquals(values.indices.toList(), connection.writeOrder)
+        assertEquals(values, (repo.state.value as ConnectionState.Connected).pedal.presetParameters)
+        repo.disconnect()
+    }
+
+    @Test fun `rejects partial local preset before writing any parameters`() = runTest {
+        val connection = RecordingPedalConnection()
+        val repo = PedalRepository(connection, this)
+        repo.connect()
+
+        val error = runCatching { repo.applyParameterSnapshot(listOf(1f, 2f)) }.exceptionOrNull()
+
+        assertTrue(error is IllegalArgumentException)
+        assertTrue(connection.writtenParameters.isEmpty())
         repo.disconnect()
     }
 

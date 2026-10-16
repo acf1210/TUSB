@@ -23,11 +23,17 @@ class UsbPedalConnection(
     private val events = MutableSharedFlow<PedalRuntimeEvent>(extraBufferCapacity = 64)
     private var lastPresetNameFromNotification: String? = null
     private var lastPresetParamsFromNotification: List<Float>? = null
+    private var latestDecodedState: PedalState? = null
+    private val presetNamesById = mutableMapOf<Int, String>()
     private val localParameterWriteAt = mutableMapOf<Int, Long>()
 
     override val runtimeEvents: Flow<PedalRuntimeEvent> = events.asSharedFlow()
 
     override suspend fun connect() {
+        lastPresetNameFromNotification = null
+        lastPresetParamsFromNotification = null
+        latestDecodedState = null
+        presetNamesById.clear()
         transport.open()
     }
 
@@ -54,9 +60,47 @@ class UsbPedalConnection(
                 payloadHex = response.toHex()
             )
         )
-        val state = decodeStateFromResponse(response)
+        val state = synchronizeLibraryPresetNames(decodeStateFromResponse(response))
         android.util.Log.d("ToneXConn", "handshake rawState(${response.size}B)=${response.joinToString(" ") { "%02X".format(it) }}")
         return Handshake(firmware = firmware, state = state)
+    }
+
+    private suspend fun synchronizeLibraryPresetNames(initialState: PedalState): PedalState {
+        var state = initialState
+        for (presetId in 0 until TonexMessages.PEDAL_LIBRARY_PRESET_COUNT) {
+            val request = TonexMessages.requestPresetMetadataPayload(presetId)
+            val response = try {
+                emitRequestEvent(requestKind = "preset_metadata", payload = request)
+                roundTripExpecting(request, TonexMessages.PRESET_DETAIL_TYPE, PRESET_METADATA_TIMEOUT_MS)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("ToneXConn", "preset metadata unavailable at id=$presetId: ${e.message}")
+                // Empty library slots may not answer ARM. Read a state frame as a FIFO
+                // barrier before querying the next ID, so a late detail cannot be assigned
+                // to the wrong preset. StateRequest does not change the active slot.
+                val barrierResponse = try {
+                    val barrier = TonexMessages.requestStatePayload()
+                    emitRequestEvent(requestKind = "preset_metadata_barrier", payload = barrier)
+                    roundTripExpecting(barrier, TonexMessages.STATE_RESPONSE_TYPE)
+                } catch (barrierError: kotlinx.coroutines.CancellationException) {
+                    throw barrierError
+                } catch (barrierError: Exception) {
+                    android.util.Log.w(
+                        "ToneXConn",
+                        "preset metadata sweep stopped at id=$presetId; state barrier failed: ${barrierError.message}"
+                    )
+                    break
+                }
+                state = decodeStateFromResponse(barrierResponse)
+                continue
+            }
+            val name = TonexMessages.parsePresetNameFromDetail(response) ?: continue
+            presetNamesById[presetId] = name
+            state = state.withLibraryPresetName(presetId, name)
+        }
+        latestDecodedState = state
+        return state
     }
 
     override suspend fun requestState(): PedalState {
@@ -126,8 +170,16 @@ class UsbPedalConnection(
     private fun decodeStateFromResponse(payload: ByteArray): PedalState {
         return try {
             val parsed = TonexMessages.parseState(payload, fieldsOffset)
-            val named = lastPresetNameFromNotification?.let(parsed::withActivePresetName) ?: parsed
+            val activePresetId = parsed.presetIds.getOrNull(parsed.activeSlot.ordinal)
+            if (activePresetId != null && lastPresetNameFromNotification != null) {
+                presetNamesById[activePresetId] = requireNotNull(lastPresetNameFromNotification)
+            }
+            val catalogued = presetNamesById.entries.fold(parsed) { current, (id, name) ->
+                current.withLibraryPresetName(id, name)
+            }
+            val named = lastPresetNameFromNotification?.let(catalogued::withActivePresetName) ?: catalogued
             val enriched = lastPresetParamsFromNotification?.let(named::withActivePresetParameters) ?: named
+            latestDecodedState = enriched
             emitEvent(
                 PedalRuntimeEvent.StateReceived(
                     state = enriched,
@@ -251,6 +303,8 @@ class UsbPedalConnection(
 
     override suspend fun disconnect() {
         transport.close()
+        presetNamesById.clear()
+        latestDecodedState = null
         emitEvent(PedalRuntimeEvent.Disconnected)
     }
 
@@ -374,6 +428,11 @@ class UsbPedalConnection(
 
     private fun emitPresetDetail(payload: ByteArray) {
         lastPresetNameFromNotification = TonexMessages.parsePresetNameFromDetail(payload)
+        val currentState = latestDecodedState
+        val activeId = currentState?.presetIds?.getOrNull(currentState.activeSlot.ordinal)
+        if (activeId != null && lastPresetNameFromNotification != null) {
+            presetNamesById[activeId] = requireNotNull(lastPresetNameFromNotification)
+        }
         val parameters = TonexMessages.parsePresetParameters(payload)
         if (parameters.isNotEmpty()) lastPresetParamsFromNotification = parameters
         lastPresetNameFromNotification?.let { presetName ->
@@ -437,6 +496,7 @@ class UsbPedalConnection(
         /** Offset do 1o campo do StateResponse, calibrado contra captura real do pedal (Fase 2, Tarefa 8). */
         const val STATE_FIELDS_OFFSET = 22
         const val RESPONSE_TIMEOUT_MS = 2000L
+        const val PRESET_METADATA_TIMEOUT_MS = 800L
         private const val PRESET_COMMAND_STEP_DELAY_MS = 120L
 
         /**

@@ -226,7 +226,7 @@ independente (nossa captura + vit3k + Builty).
   `rebuildStateCommand`.
 
 **Material adicional (roadmap do editor):**
-- `tonex_params.c` define a tabela completa de 106 parametros (85 de preset: noise gate,
+- `tonex_params.c` define a tabela completa de 109 parametros (85 de preset: noise gate,
   compressor, EQ, amp, cab/VIR, reverb, modulacao, delay + globais BPM/master volume),
   com nome, min/max e tipo (SWITCH/RANGE/SELECT) de cada um. Util como referencia de
   ranges para a UI do editor; o mapeamento byte a byte no StateData nao esta documentado

@@ -149,6 +149,26 @@ class PedalRepository(
         _state.value = current.copy(pedal = current.pedal.withParameterValue(index, value))
     }
 
+    /**
+     * Applies a complete TUSB local snapshot to the active pedal preset in RAM using
+     * sequential 0x0309 single-parameter writes. The protocol has no per-write ACK, so
+     * completion means all writes were queued without a transport error. This does not save permanently.
+     */
+    suspend fun applyParameterSnapshot(parameters: List<Float>) = operationMutex.withLock {
+        require(parameters.size == TonexParam.TABLE_SIZE) {
+            "A local preset must contain exactly ${TonexParam.TABLE_SIZE} parameters"
+        }
+        require(parameters.all(Float::isFinite)) { "Local preset parameters must be finite" }
+        require(com.opentonex.controller.ui.presets.LocalTonePresetCodec.validParameterValues(parameters)) {
+            "Local preset parameters are outside the supported ranges"
+        }
+        val current = _state.value as? ConnectionState.Connected ?: return
+        parameters.forEachIndexed { index, value -> connection.writeParameter(index, value) }
+        val updated = current.pedal.withActivePresetParameters(parameters)
+        _state.value = current.copy(pedal = updated)
+        recordLocalAction("apply_local_preset", mapOf("parameterCount" to parameters.size))
+    }
+
     suspend fun refreshState() {
         syncState(recordAction = true)
     }

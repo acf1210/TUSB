@@ -121,4 +121,14 @@
     <string name="midi_not_supported">This device does not support MIDI.</string>
     <string name="midi_pc_note">Program Change 0–19 always loads preset 1–20 (matches M-Vave Chocolate factory default).</string>
     <string name="midi_cc_none">—</string>
+    <string name="local_presets_title">Local preset library</string>
+    <string name="preset_name_not_synced">Preset %1$02d · name not synced</string>
+    <string name="local_presets_description">Snapshots saved on this phone. They are separate from the presets stored on the pedal.</string>
+    <string name="local_presets_save_current">Save current</string>
+    <string name="local_presets_import">Import</string>
+    <string name="local_presets_empty">No local snapshots yet.</string>
+    <string name="local_presets_ram_note">Apply writes settings to the active pedal preset in memory; it does not save permanently.</string>
+    <string name="local_presets_apply">Apply</string>
+    <string name="local_presets_export">Export</string>
+    <string name="local_presets_delete">Delete</string>
 </resources>

@@ -45,6 +45,8 @@ enum class TonexParam(
         if (max <= min) 0f else ((value - min) / (max - min)).coerceIn(0f, 1f)
 
     companion object {
+        // The current published parameter layout ends at delay tape mix, index 108.
+        const val TABLE_SIZE = 109
         fun fromIndex(index: Int): TonexParam? = entries.firstOrNull { it.index == index }
     }
 }

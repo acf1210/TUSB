@@ -15,6 +15,7 @@ object TonexMessages {
     /** Tipo de mensagem (offsets 3-4, u16 LE) do StateResponse real do pedal. */
     const val STATE_RESPONSE_TYPE = 0x0306
     const val PRESET_DETAIL_TYPE = 0x0304
+    const val PEDAL_LIBRARY_PRESET_COUNT = 20
 
     /**
      * Le o tipo de mensagem (header `B9 03 81 [2 bytes LE]`) de uma resposta decodificada.
@@ -58,16 +59,16 @@ object TonexMessages {
         0x80.toByte(), 0x0B, 0x01, 0xB9.toByte(), 0x02, 0x02, 0x0B
     )
 
-    // --- Comando de troca de preset (host->device), tipo 0x0300. Descoberto via captura
-    // USB do app oficial (PC) trocando preset - ver docs/protocol-notes.md, Bug 2. ---
+    // --- Pedido ARM de metadados da biblioteca, tipo 0x0300. A fase COMMIT baixa o modelo
+    // completo e nao faz parte da sincronizacao de nomes. Ver docs/protocol-notes.md. ---
 
-    /** Tipo de mensagem do comando de troca de preset (header `B9 03 81 00 03`). */
+    /** Tipo de mensagem do pedido de metadados (header `B9 03 81 00 03`). */
     const val PRESET_SELECT_TYPE = 0x0300
 
-    /** Fase "arm/preview": o app oficial envia esta antes de efetivar. */
+    /** Fase ARM: busca os metadados e o nome do preset sem baixar o modelo completo. */
     const val PRESET_PHASE_ARM = 0x00
 
-    /** Fase "commit/load": efetiva a troca. O app envia ARM e depois COMMIT. */
+    /** Fase COMMIT: baixa o modelo completo; nao usar para apenas importar nomes. */
     const val PRESET_PHASE_COMMIT = 0x01
 
     /** Comando curto intercalado pelo app oficial entre ARM e COMMIT. */
@@ -95,9 +96,8 @@ object TonexMessages {
     )
 
     /**
-     * Monta o payload (sem framing HDLC) de UMA fase do comando de troca de preset.
-     * [presetId] e o ID do preset na biblioteca do pedal (ex.: 0x0C, 0x08, 0x07 na captura);
-     * o mapeamento slot A/B/C -> id vem da colecao de slots do StateResponse 0x0306.
+     * Monta o payload (sem framing HDLC) de UMA fase da consulta de metadados da biblioteca.
+     * [presetId] e um ID de preset entre 0 e 19.
      */
     fun selectPresetPayload(presetId: Int, phase: Int): ByteArray {
         require(presetId in 0..0xFF) { "presetId fora de 0..255: $presetId" }
@@ -107,14 +107,13 @@ object TonexMessages {
         return PRESET_SELECT_PREFIX + byteArrayOf(presetId.toByte(), phase.toByte())
     }
 
-    /**
-     * As duas fases do comando de troca, na ordem que o app oficial envia (ARM -> COMMIT).
-     * Cada elemento deve ser encapsulado com [HdlcCodec.encode] e escrito em sequencia.
-     */
-    fun selectPresetPayloads(presetId: Int): List<ByteArray> = listOf(
-        selectPresetPayload(presetId, PRESET_PHASE_ARM),
-        selectPresetPayload(presetId, PRESET_PHASE_COMMIT)
-    )
+    fun requestPresetMetadataPayload(presetId: Int): ByteArray {
+        require(presetId in 0 until PEDAL_LIBRARY_PRESET_COUNT) { "presetId fora da biblioteca suportada: $presetId" }
+        return selectPresetPayload(presetId, PRESET_PHASE_ARM)
+    }
+
+    fun presetMetadataSweepPayloads(): List<ByteArray> =
+        (0 until PEDAL_LIBRARY_PRESET_COUNT).map(::requestPresetMetadataPayload)
 
     /**
      * Comando cru de troca de preset usado pelo firmware USB de referencia
@@ -418,11 +417,12 @@ object TonexMessages {
                 color = color
             )
         }
-        val libraryPresets = walk.colors.take(20).mapIndexed { index, color ->
+        val libraryPresets = (0 until PEDAL_LIBRARY_PRESET_COUNT).map { index ->
             LibraryPreset(
                 index = index,
                 name = "Preset ${(index + 1).toString().padStart(2, '0')}",
-                color = color
+                color = walk.colors.getOrNull(index) ?: Rgb(96, 96, 96),
+                hasDeviceName = false
             )
         }
         return PedalState(

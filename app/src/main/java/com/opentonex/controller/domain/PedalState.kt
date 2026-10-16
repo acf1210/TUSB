@@ -27,7 +27,9 @@ data class PresetSlot(
 data class LibraryPreset(
     val index: Int,
     val name: String,
-    val color: Rgb
+    val color: Rgb,
+    /** True only when the name came from a pedal metadata response or user data. */
+    val hasDeviceName: Boolean = true
 )
 
 /** Tipo de cabinet do preset ativo (tonex_params indice 24). */
@@ -153,7 +155,8 @@ data class PedalState(
         val ids = presetIds.toMutableList()
         while (ids.size < Slot.entries.size) ids.add(0)
         ids[slot.ordinal] = presetId
-        val presetName = libraryPresets.getOrNull(presetId)?.name ?: "Preset ${presetId + 1}"
+        val preset = libraryPresets.getOrNull(presetId)
+        val presetName = preset?.name?.takeIf { preset.hasDeviceName } ?: "Preset ${(presetId + 1).toString().padStart(2, '0')}"
         val updatedSlots = slots.mapIndexed { index, preset ->
             if (index == slot.ordinal) preset.copy(name = presetName) else preset
         }
@@ -242,7 +245,20 @@ data class PedalState(
         val updatedSlots = slots.mapIndexed { index, preset ->
             if (index == slotIndex) preset.copy(name = name) else preset
         }
-        return copy(slots = updatedSlots)
+        val libraryId = presetIds.getOrNull(slotIndex)
+        val updatedLibrary = libraryId?.let { id ->
+            libraryPresets.map { preset ->
+                if (preset.index == id) preset.copy(name = name, hasDeviceName = true) else preset
+            }
+        } ?: libraryPresets
+        return copy(slots = updatedSlots, libraryPresets = updatedLibrary)
+    }
+
+    fun withLibraryPresetName(presetId: Int, name: String): PedalState {
+        if (presetId !in 0 until libraryPresets.size || name.isBlank()) return this
+        return copy(libraryPresets = libraryPresets.map { preset ->
+            if (preset.index == presetId) preset.copy(name = name.trim(), hasDeviceName = true) else preset
+        })
     }
 
     override fun equals(other: Any?): Boolean {

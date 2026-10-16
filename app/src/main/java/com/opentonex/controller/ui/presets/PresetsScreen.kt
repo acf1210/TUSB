@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,6 +39,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,6 +96,8 @@ fun PresetsScreen(
     /** Apelidos e nomes manuais de amp/cab por preset (persistidos localmente). */
     customizations: Map<Int, PresetCustomization> = emptyMap(),
     onSaveCustomization: ((Int, PresetCustomization) -> Unit)? = null,
+    activeParameters: List<Float> = emptyList(),
+    onApplyLocalPreset: (List<Float>) -> Unit = {},
     onSelectSlot: (Slot) -> Unit,
     onLoadPreset: (Int) -> Unit,
     onSwitchMode: (PedalMode) -> Unit,
@@ -100,9 +106,59 @@ fun PresetsScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var editingPreset by remember { mutableStateOf<LibraryPreset?>(null) }
+    val context = LocalContext.current
+    val localStore = remember(context) { LocalTonePresetStore(context) }
+    var localPresets by remember { mutableStateOf(runCatching(localStore::loadAll).getOrDefault(emptyList())) }
+    var localLibraryError by remember { mutableStateOf<String?>(null) }
+    var pendingExport by rememberSaveable { mutableStateOf<String?>(null) }
+    val exportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val content = pendingExport
+        pendingExport = null
+        if (uri != null && content != null) {
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(content) }
+                    ?: error("Could not open destination")
+            }.onFailure { localLibraryError = it.message ?: "Preset export failed" }
+        }
+    }
+    val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                val input = requireNotNull(context.contentResolver.openInputStream(uri))
+                val bytes = input.use { stream ->
+                    val output = java.io.ByteArrayOutputStream()
+                    val buffer = ByteArray(4096)
+                    var total = 0
+                    while (true) {
+                        val count = stream.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        require(total <= 128 * 1024) { "Preset file is too large" }
+                        output.write(buffer, 0, count)
+                    }
+                    output.toByteArray()
+                }
+                localStore.import(String(bytes, Charsets.UTF_8))
+            }.onSuccess {
+                localPresets = localStore.loadAll()
+                localLibraryError = null
+            }.onFailure { localLibraryError = it.message ?: "Preset import failed" }
+        }
+    }
     val visiblePresets = remember(libraryPresets, searchQuery, customizations) {
         val source = libraryPresets.ifEmpty {
-            (0 until 20).map { index -> LibraryPreset(index = index, name = "Preset ${index + 1}", color = fallbackPresetColor(index)) }
+            (0 until 20).map { index ->
+                LibraryPreset(
+                    index = index,
+                    name = "Preset ${(index + 1).toString().padStart(2, '0')}",
+                    color = fallbackPresetColor(index),
+                    hasDeviceName = false
+                )
+            }
         }
         if (searchQuery.isBlank()) source
         else source.filter { preset ->
@@ -110,6 +166,9 @@ fun PresetsScreen(
             display.contains(searchQuery, ignoreCase = true) ||
                 preset.name.contains(searchQuery, ignoreCase = true)
         }
+    }
+    val visibleLocalPresets = remember(localPresets, searchQuery) {
+        localPresets.filter { it.preset.name.contains(searchQuery, ignoreCase = true) }
     }
 
     Box(
@@ -152,13 +211,70 @@ fun PresetsScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            item(key = "local-library-header") {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    Text(stringResource(R.string.local_presets_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.local_presets_description), style = MaterialTheme.typography.bodySmall, color = ToneXOnSurfaceMuted)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                runCatching {
+                                    require(activeParameters.size == LocalTonePreset.MAX_PARAMETERS) {
+                                        "Connect and sync a complete preset before saving a local snapshot"
+                                    }
+                                    require(activeParameters.all(Float::isFinite)) { "Preset parameters are invalid" }
+                                    localStore.save(LocalTonePreset("Slot ${activeSlot.name} snapshot", activeParameters.toList()))
+                                }.onSuccess {
+                                    localPresets = localStore.loadAll()
+                                    localLibraryError = null
+                                }.onFailure { localLibraryError = it.message ?: "Could not save local snapshot" }
+                            },
+                            enabled = !isBusy && activeParameters.size == LocalTonePreset.MAX_PARAMETERS
+                        ) { Text(stringResource(R.string.local_presets_save_current)) }
+                        OutlinedButton(onClick = { importLauncher.launch(arrayOf("text/plain", "application/octet-stream", "*/*")) }) {
+                            Text(stringResource(R.string.local_presets_import))
+                        }
+                    }
+                    localLibraryError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                }
+            }
+            if (visibleLocalPresets.isEmpty()) {
+                item(key = "local-library-empty") {
+                    Text(stringResource(R.string.local_presets_empty), style = MaterialTheme.typography.bodySmall, color = ToneXOnSurfaceMuted)
+                }
+            }
+            items(visibleLocalPresets, key = { "local-${it.id}" }) { stored ->
+                LocalTonePresetRow(
+                    stored = stored,
+                    enabled = !isBusy,
+                    onApply = { onApplyLocalPreset(stored.preset.parameters) },
+                    onExport = {
+                        runCatching { localStore.export(stored.id) }
+                            .onSuccess { content ->
+                                pendingExport = content
+                                exportLauncher.launch("${stored.preset.name.take(48)}.tusb-preset")
+                            }
+                            .onFailure { localLibraryError = it.message ?: "Preset export failed" }
+                    },
+                    onDelete = {
+                        runCatching { localStore.delete(stored.id) }
+                            .onSuccess { localPresets = localStore.loadAll(); localLibraryError = null }
+                            .onFailure { localLibraryError = it.message ?: "Preset delete failed" }
+                    }
+                )
+            }
+            item(key = "pedal-library-heading") {
+                Text(stringResource(R.string.presets_pedal_slots), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
+            }
             items(visiblePresets, key = { it.index }) { preset ->
                 val slotBadge = slotForPreset(preset, presets)
                 val isActive = slotBadge != null && slotBadge == activeSlot
                 val custom = customizations[preset.index]
                 PresetListRow(
                     number = preset.index + 1,
-                    name = custom?.name ?: preset.name,
+                    name = custom?.name ?: if (preset.hasDeviceName) preset.name else {
+                        stringResource(R.string.preset_name_not_synced, preset.index + 1)
+                    },
                     accent = preset.color.toColor(),
                     slotBadge = slotBadge,
                     isActive = isActive,
@@ -187,6 +303,27 @@ fun PresetsScreen(
                 editingPreset = null
             }
         )
+    }
+}
+
+@Composable
+private fun LocalTonePresetRow(
+    stored: StoredLocalTonePreset,
+    enabled: Boolean,
+    onApply: () -> Unit,
+    onExport: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Surface(color = ToneXSurfaceVariant, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stored.preset.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.local_presets_ram_note), style = MaterialTheme.typography.bodySmall, color = ToneXOnSurfaceMuted)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Button(onClick = onApply, enabled = enabled) { Text(stringResource(R.string.local_presets_apply)) }
+                OutlinedButton(onClick = onExport, enabled = enabled) { Text(stringResource(R.string.local_presets_export)) }
+                OutlinedButton(onClick = onDelete, enabled = enabled) { Text(stringResource(R.string.local_presets_delete)) }
+            }
+        }
     }
 }
 
