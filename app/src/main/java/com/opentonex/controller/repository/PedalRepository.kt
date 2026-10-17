@@ -9,6 +9,7 @@ import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.Slot
 import com.opentonex.controller.domain.TonexParam
+import com.opentonex.controller.protocol.GlobalSetting
 import com.opentonex.controller.protocol.TonexMessages
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -43,6 +44,10 @@ class PedalRepository(
         MutableSharedFlow<PedalRuntimeEvent.ParameterChanged>(extraBufferCapacity = 64)
     val parameterChanges: SharedFlow<PedalRuntimeEvent.ParameterChanged> =
         _parameterChanges.asSharedFlow()
+    /** Volume master (0..10) informado pelo pedal; null ate a primeira resposta. */
+    private val _masterVolume = MutableStateFlow<Float?>(null)
+    val masterVolume: StateFlow<Float?> = _masterVolume.asStateFlow()
+    private var masterVolumeRequests = 0
     private var eventRecorder: EventCaptureRecorder? = null
     private var runtimeEventsJob: Job? = null
     private var lastConfirmedActiveSlot: Slot? = null
@@ -62,6 +67,8 @@ class PedalRepository(
         val handshake = connection.handshake()
         stablePresetIds = handshake.state.presetIds.takeIf { it.isNotEmpty() }
         _state.value = ConnectionState.Connected(handshake.firmware, handshake.state)
+        masterVolumeRequests = 0
+        requestMasterVolumeIfMissing()
     }
 
     suspend fun selectSlot(slot: Slot) = operationMutex.withLock {
@@ -132,6 +139,25 @@ class PedalRepository(
         )
     }
 
+    /**
+     * Grava um ajuste global (trim, A4, tempo...) reenviando o estado com o campo alterado.
+     * Lanca [IllegalArgumentException] se o estado do pedal nao tiver o layout conhecido.
+     */
+    suspend fun setGlobal(setting: GlobalSetting, value: Float) = operationMutex.withLock {
+        val current = _state.value as? ConnectionState.Connected ?: return
+        val updated = current.pedal.withGlobal(setting, value)
+        recordLocalAction("set_global", mapOf("setting" to setting.name, "value" to value))
+        _state.value = current.copy(pedal = updated)
+        connection.writeGlobalState(updated)
+    }
+
+    suspend fun setMasterVolume(value: Float) = operationMutex.withLock {
+        if (_state.value !is ConnectionState.Connected) return
+        recordLocalAction("set_master_volume", mapOf("value" to value))
+        _masterVolume.value = value
+        connection.writeMasterVolume(value)
+    }
+
     /** Escreve [value] (valor REAL, ex.: gain 0..10) no parametro [param] do preset ativo. */
     suspend fun writeParameter(param: TonexParam, value: Float) =
         writeParameterIndex(param.index, value)
@@ -156,15 +182,29 @@ class PedalRepository(
     suspend fun syncStateFromPedal() {
         val conn = connection as? UsbPedalConnection
         if (conn == null) {
+            operationMutex.withLock { requestMasterVolumeIfMissing() }
             syncState(recordAction = false)
             return
         }
         operationMutex.withLock {
             val current = _state.value as? ConnectionState.Connected ?: return
+            requestMasterVolumeIfMissing()
             // Drena a rajada inteira (knob fisico gera dezenas de 0x0309 entre polls).
             val passiveState = conn.drainPassiveFrames() ?: return
             _state.value = current.copy(pedal = reconcilePedal(passiveState))
         }
+    }
+
+    /**
+     * Pede o volume master enquanto ele nao chegar. A resposta vem pelo caminho passivo
+     * (0x0309), e o pedal descarta parte dos comandos: o pedido feito logo apos o handshake
+     * caiu na bancada. Repete nos polls, com limite, e falhar aqui nao derruba a conexao.
+     */
+    private suspend fun requestMasterVolumeIfMissing() {
+        if (_state.value !is ConnectionState.Connected) return
+        if (_masterVolume.value != null || masterVolumeRequests >= MASTER_VOLUME_REQUEST_ATTEMPTS) return
+        masterVolumeRequests++
+        runCatching { connection.requestMasterVolume() }
     }
 
     private suspend fun syncState(recordAction: Boolean) = operationMutex.withLock {
@@ -180,6 +220,7 @@ class PedalRepository(
         connection.disconnect()
         lastConfirmedActiveSlot = null
         stablePresetIds = null
+        _masterVolume.value = null
         _state.value = ConnectionState.Disconnected
     }
 
@@ -234,7 +275,9 @@ class PedalRepository(
                 }
                 _parameterChanges.tryEmit(event)
             }
+            is PedalRuntimeEvent.MasterVolumeChanged -> _masterVolume.value = event.value
             PedalRuntimeEvent.Disconnected -> {
+                _masterVolume.value = null
                 lastConfirmedActiveSlot = null
                 stablePresetIds = null
                 _state.value = ConnectionState.Disconnected
@@ -260,5 +303,9 @@ class PedalRepository(
             return this
         }
         return withPresetIds(knownIds)
+    }
+
+    private companion object {
+        const val MASTER_VOLUME_REQUEST_ATTEMPTS = 10
     }
 }

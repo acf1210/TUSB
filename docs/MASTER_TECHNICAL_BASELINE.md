@@ -53,8 +53,6 @@ Funcionando ate o momento:
 
 Ainda nao concluido:
 
-- Persistir parametros alterados no preset do pedal (a escrita 0x0309 altera o preset
-  ativo em memoria; o comando de "save" permanente ainda nao foi mapeado).
 - Parsear o detalhe completo do preset `0x0304` (nome + parametros ja sao extraidos;
   demais campos ainda nao mapeados).
 
@@ -289,6 +287,18 @@ Conclusao:
 - O app ainda captura esses frames como `FrameReceived`; aplicar na UI exige um evento
   semantico novo e uma tabela de IDs confirmados.
 
+### 5.9 Ajustes globais e volume master (validado em bancada, 2026-10-17)
+
+- Trim de entrada, saida com afinador ligado (mudo/thru), referencia A4, fonte do tempo e
+  BPM global vivem no StateData `0x0306` e sao gravados como a troca de slot: muda os bytes
+  do campo e reenvia o estado com o header de comando. Offsets e formatos em
+  `docs/protocol-notes.md` e `protocol/TonexGlobals.kt`.
+- Volume master (0..10) tem comando proprio: `0x0309` com subtipo `03`; leitura via `0x030D`
+  e resposta `0x0309` de subtipo `03`.
+- O ToneX One salva sozinho cada edicao feita via `0x0309`: nao existe comando de "salvar
+  preset" para mapear.
+- Ligar o afinador do pedal via USB nao funciona no ToneX One (so no One Plus).
+
 ## 6. Funcionalidades implementadas
 
 ### 6.1 Identidade visual TUSB
@@ -495,6 +505,17 @@ Tabela provisoria:
 | Volume    | desconhecido | Pendente |
 
 ## 12. Historico de versoes
+
+### main (2026-10-17) - Paridade com o app oficial e ajustes globais no pedal
+
+- Menu > Volume/Afinador/Geral gravam no pedal: volume master, trim, A4, saida com afinador
+  (mudo/thru), BPM global e fonte do tempo. Ida e volta de cada ajuste confirmada pelo
+  0x0306 devolvido pelo pedal real (ver `docs/protocol-notes.md`).
+- Seletor de modelo em Reverb, Mod e Delay (indices 38/65/96, confirmados contra presets reais;
+  troca de modelo ainda nao exercitada em bancada).
+- Presets: favoritos, classificacao por instrumento/genero/carater, filtros e ordenacao.
+- Ferramentas: metronomo com compasso, roda de BPM, TAP, timbre, volume e acento.
+- Modo simulado com bloco de parametros de demonstracao (editor e detalhe de efeito completos).
 
 ### 0.4.0 - Navegacao final, identidade visual e ferramentas reais
 

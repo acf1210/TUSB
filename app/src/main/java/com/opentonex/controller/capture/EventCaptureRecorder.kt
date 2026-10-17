@@ -1,6 +1,7 @@
 package com.opentonex.controller.capture
 
 import com.opentonex.controller.connection.PedalRuntimeEvent
+import com.opentonex.controller.protocol.TonexMessages
 import java.io.File
 
 data class CaptureSession(
@@ -125,6 +126,14 @@ class EventCaptureRecorder(
                 payload["eventKind"] = "parameter_change"
                 payload["payloadHex"] = event.payloadHex
                 payload["parsed"] = mapOf("paramIndex" to event.paramIndex, "value" to event.value)
+                payload["notes"] = null
+            }
+            is PedalRuntimeEvent.MasterVolumeChanged -> {
+                payload["source"] = "runtime"
+                payload["messageType"] = TonexMessages.PARAM_CHANGE_TYPE.toHexType()
+                payload["eventKind"] = "master_volume"
+                payload["payloadHex"] = event.payloadHex
+                payload["parsed"] = mapOf("value" to event.value)
                 payload["notes"] = null
             }
             is PedalRuntimeEvent.TransportError -> {

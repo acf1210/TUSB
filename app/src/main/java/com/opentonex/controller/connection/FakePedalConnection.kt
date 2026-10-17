@@ -7,6 +7,7 @@ import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.PresetSlot
 import com.opentonex.controller.domain.Rgb
 import com.opentonex.controller.domain.Slot
+import com.opentonex.controller.domain.TonexParam
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -34,7 +35,8 @@ class FakePedalConnection : PedalConnection {
                 }
             )
         },
-        presetIds = listOf(0x0C, 0x08, 0x07)
+        presetIds = listOf(0x0C, 0x08, 0x07),
+        presetParameters = simulatedPresetParameters()
     )
 
     override val runtimeEvents: Flow<PedalRuntimeEvent> = events.asSharedFlow()
@@ -119,11 +121,58 @@ class FakePedalConnection : PedalConnection {
         )
     }
 
+    /** Volume master simulado (0..10), como o pedal informa no 0x0309 de subtipo 0x03. */
+    var masterVolume = 8f
+        private set
+
+    override suspend fun writeMasterVolume(value: Float) {
+        masterVolume = value
+        requestMasterVolume()
+    }
+
+    override suspend fun requestMasterVolume() {
+        events.tryEmit(PedalRuntimeEvent.MasterVolumeChanged(value = masterVolume, payloadHex = ""))
+    }
+
     /** Ultimo valor escrito por indice de parametro (inspecionavel nos testes). */
     val parameters = mutableMapOf<Int, Float>()
     val parameterWriteCounts = mutableMapOf<Int, Int>()
 
     override suspend fun disconnect() {
         events.tryEmit(PedalRuntimeEvent.Disconnected)
+    }
+
+    private companion object {
+        /** Tamanho do bloco de parametros do 0x0304 (indices 0..108 da tabela tonex_params). */
+        const val SIMULATED_PARAMETER_COUNT = 109
+
+        /**
+         * Bloco de parametros do preset simulado, para o editor e o detalhe de efeito terem o
+         * que mostrar sem pedal. Valores de demonstracao escolhidos aqui, nao copiados de preset.
+         */
+        fun simulatedPresetParameters(): List<Float> {
+            val values = MutableList(SIMULATED_PARAMETER_COUNT) { 5f } // meio da faixa 0..10
+            val demo = mapOf(
+                TonexParam.NOISE_GATE_ENABLE to 1f,
+                TonexParam.COMP_ENABLE to 1f,
+                TonexParam.COMP_MAKE_UP to 0f,
+                TonexParam.EQ_BASS to 5.5f,
+                TonexParam.EQ_MID to 4.5f,
+                TonexParam.EQ_TREBLE to 6f,
+                TonexParam.MODEL_AMP_ENABLE to 1f,
+                TonexParam.MODEL_GAIN to 6.5f,
+                TonexParam.MODEL_VOLUME to 7f,
+                TonexParam.CABINET_TYPE to 0f,
+                TonexParam.VIR_CABINET_MODEL to 0f,
+                TonexParam.REVERB_ENABLE to 1f,
+                TonexParam.REVERB_MODEL to 4f, // Room
+                TonexParam.MODULATION_ENABLE to 0f,
+                TonexParam.MODULATION_MODEL to 0f, // Chorus
+                TonexParam.DELAY_ENABLE to 1f,
+                TonexParam.DELAY_MODEL to 1f // Tape
+            )
+            demo.forEach { (param, value) -> values[param.index] = value }
+            return values
+        }
     }
 }

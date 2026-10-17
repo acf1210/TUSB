@@ -5,6 +5,7 @@ import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.protocol.HdlcCodec
 import com.opentonex.controller.protocol.HdlcFrame
+import com.opentonex.controller.protocol.TonexGlobals
 import com.opentonex.controller.protocol.TonexMessages
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -225,6 +226,33 @@ class UsbPedalConnection(
         transport.write(frame)
     }
 
+    override suspend fun writeGlobalState(state: PedalState) {
+        // Regrava com o slot e o bypass do app: o slot local pode estar a frente do
+        // rawState (troca otimista), e reenviar o byte velho voltaria o pedal de slot.
+        val payload = TonexMessages.buildSlotChangePayload(
+            rawState = state.rawState,
+            activeSlotOffset = TonexMessages.activeSlotOffset(state.rawState, fieldsOffset),
+            newSlotValue = TonexMessages.slotToByte(state.activeSlot),
+            bypass = state.bypassMode
+        )
+        android.util.Log.d("ToneXConn", "writeGlobalState (${payload.size}B)")
+        emitRequestEvent(requestKind = "write_global_state", payload = payload)
+        transport.write(HdlcCodec.encode(payload))
+    }
+
+    override suspend fun writeMasterVolume(value: Float) {
+        val payload = TonexGlobals.buildSetMasterVolumePayload(value)
+        android.util.Log.d("ToneXConn", "writeMasterVolume value=$value")
+        emitRequestEvent(requestKind = "write_master_volume", payload = payload)
+        transport.write(HdlcCodec.encode(payload))
+    }
+
+    override suspend fun requestMasterVolume() {
+        val payload = TonexGlobals.requestMasterVolumePayload()
+        emitRequestEvent(requestKind = "request_master_volume", payload = payload)
+        transport.write(HdlcCodec.encode(payload))
+    }
+
     override suspend fun writeParameter(paramIndex: Int, value: Float) {
         val payload = TonexMessages.buildSetParameterPayload(paramIndex, value)
         val frame = HdlcCodec.encode(payload)
@@ -350,6 +378,11 @@ class UsbPedalConnection(
 
     /** Decodifica uma notificacao 0x0309 (knob fisico) e a publica como evento de runtime. */
     private fun emitParameterChange(payload: ByteArray) {
+        TonexGlobals.parseMasterVolume(payload)?.let { volume ->
+            android.util.Log.d("ToneXConn", "masterVolume=$volume")
+            emitEvent(PedalRuntimeEvent.MasterVolumeChanged(value = volume, payloadHex = payload.toHex()))
+            return
+        }
         val change = TonexMessages.parseParameterChange(payload) ?: run {
             android.util.Log.w("ToneXConn", "paramChange nao parseado: ${payload.toHex()}")
             return

@@ -11,6 +11,8 @@ import com.opentonex.controller.domain.Slot
 import com.opentonex.controller.domain.TonexEffectParams
 import com.opentonex.controller.domain.TonexParam
 import com.opentonex.controller.domain.TonexParamBinding
+import com.opentonex.controller.protocol.GlobalSetting
+import com.opentonex.controller.protocol.TonexGlobals
 import com.opentonex.controller.repository.ConnectionState
 import com.opentonex.controller.repository.PedalRepository
 import com.opentonex.controller.ui.editor.EffectSlotType
@@ -103,14 +105,24 @@ fun EffectSlotType.postBinding(): TonexParamBinding? = when (this) {
     EffectSlotType.CAB -> null
 }
 
+/** Parametro que escolhe o modelo do bloco (reverb/modulacao/delay); null nos demais. */
+fun EffectSlotType.modelParam(): TonexParam? = when (this) {
+    EffectSlotType.REV -> TonexParam.REVERB_MODEL
+    EffectSlotType.MOD -> TonexParam.MODULATION_MODEL
+    EffectSlotType.DLY -> TonexParam.DELAY_MODEL
+    else -> null
+}
+
 /** Controles da tela de detalhe de efeito que escrevem no pedal. */
-enum class EffectControl { KNOB_A, KNOB_B, KNOB_C, POST, DELAY_SYNC, DELAY_PINGPONG, CABINET_TYPE }
+enum class EffectControl { KNOB_A, KNOB_B, KNOB_C, POST, DELAY_SYNC, DELAY_PINGPONG, CABINET_TYPE, MODEL }
 
 /** Valores iniciais da tela de detalhe, derivados do bloco de parametros do preset ativo. */
 data class EffectDetailUiState(
     val knobA: Float = 0.35f,
     val knobB: Float = 0.20f,
     val knobC: Float = 0.50f,
+    /** Modelo ativo do bloco (indice em EffectModels); null se o bloco nao tem modelos. */
+    val model: Int? = null,
     val cabinetType: Int? = null,
     val post: Boolean = true,
     val delaySync: Boolean = false,
@@ -118,13 +130,11 @@ data class EffectDetailUiState(
 )
 
 /**
- * Ajustes do Menu que ainda nao tem escrita real no pedal (protocolo desses campos nao foi
- * mapeado). Ficam locais no app ate o sub-projeto de mapeamento de parametros confirmar os
- * offsets reais no StateData.
+ * Ajustes do Menu. Trim, A4, tempo e afinador vivem no [PedalState]; o volume master (0..10)
+ * vem do pedal por um comando proprio e fica null ate a primeira resposta. O tema e local.
  */
 data class MenuUiState(
-    val masterVolume: Float = 0.75f,
-    val a4ReferenceOverride: Int = 440,
+    val masterVolume: Float? = null,
     val theme: TusbTheme = TusbTheme.CLASSIC
 )
 
@@ -258,6 +268,9 @@ class PedalViewModel : ViewModel() {
             knobA = valueOf(a, 0.35f),
             knobB = valueOf(b, 0.20f),
             knobC = valueOf(c, 0.50f),
+            model = effect.modelParam()?.let { param ->
+                pedal.parameterValue(param)?.toInt()?.coerceIn(param.min.toInt(), param.max.toInt())
+            },
             cabinetType = pedal.parameterValue(TonexParam.CABINET_TYPE)?.toInt()?.coerceIn(0, 2),
             post = postBinding?.let { bind -> (params.getOrNull(bind.index) ?: 1f) >= 0.5f } ?: true,
             delaySync = (params.getOrNull(TonexEffectParams.delaySync(delayModel).index) ?: 0f) >= 0.5f,
@@ -271,6 +284,17 @@ class PedalViewModel : ViewModel() {
      */
     fun updateEffectControl(effect: EffectSlotType, control: EffectControl, value: Float) {
         val pedal = (state.value as? ConnectionState.Connected)?.pedal ?: return
+        if (control == EffectControl.MODEL) {
+            // Trocar o modelo muda quais indices os knobs do bloco usam: republica o estado
+            // para a tela reler os valores do modelo novo.
+            val modelParam = effect.modelParam() ?: return
+            val repo = repository ?: return
+            viewModelScope.launch {
+                runCatching { repo.writeParameter(modelParam, value.coerceIn(modelParam.min, modelParam.max)) }
+                    .onSuccess { publishRepositoryState(repo.state.value) }
+            }
+            return
+        }
         if (effect == EffectSlotType.CAB && control == EffectControl.CABINET_TYPE) {
             val repo = repository ?: return
             viewModelScope.launch {
@@ -286,7 +310,7 @@ class PedalViewModel : ViewModel() {
             EffectControl.POST -> effect.postBinding()
             EffectControl.DELAY_SYNC -> TonexEffectParams.delaySync(pedal.delayModel())
             EffectControl.DELAY_PINGPONG -> TonexEffectParams.delayMode(pedal.delayModel())
-            EffectControl.CABINET_TYPE -> null
+            EffectControl.CABINET_TYPE, EffectControl.MODEL -> null
         } ?: return
         when (control) {
             EffectControl.KNOB_A, EffectControl.KNOB_B, EffectControl.KNOB_C ->
@@ -363,11 +387,34 @@ class PedalViewModel : ViewModel() {
     val menu: StateFlow<MenuUiState> = _menu.asStateFlow()
 
     fun updateMasterVolume(value: Float) {
-        _menu.value = _menu.value.copy(masterVolume = value.coerceIn(0f, 1f))
+        val repo = repository ?: return
+        val clamped = value.coerceIn(TonexGlobals.MASTER_VOLUME_MIN, TonexGlobals.MASTER_VOLUME_MAX)
+        _menu.value = _menu.value.copy(masterVolume = clamped)
+        launchSettingWrite { repo.setMasterVolume(clamped) }
     }
 
-    fun updateA4Reference(value: Int) {
-        _menu.value = _menu.value.copy(a4ReferenceOverride = value.coerceIn(430, 450))
+    /** Grava um ajuste global no pedal (trim, A4, tempo, fonte do tempo, saida do afinador). */
+    fun updateGlobalSetting(setting: GlobalSetting, value: Float) {
+        val repo = repository ?: return
+        launchSettingWrite {
+            repo.setGlobal(setting, value)
+            publishRepositoryState(repo.state.value)
+        }
+    }
+
+    private fun launchSettingWrite(write: suspend () -> Unit) {
+        viewModelScope.launch {
+            try {
+                _error.value = null
+                write()
+            } catch (e: Exception) {
+                _error.value = e.message ?: localText(
+                    "Falha ao gravar o ajuste no pedal",
+                    "Failed to write the pedal setting",
+                    "No se pudo guardar el ajuste en el pedal"
+                )
+            }
+        }
     }
 
     fun updateTheme(theme: TusbTheme) {
@@ -624,10 +671,15 @@ class PedalViewModel : ViewModel() {
         }
 
     private var parameterChangesJob: Job? = null
+    private var masterVolumeJob: Job? = null
 
     private fun attachRepository(repo: PedalRepository) {
         statePollingJob?.cancel()
         repository = repo
+        masterVolumeJob?.cancel()
+        masterVolumeJob = viewModelScope.launch {
+            repo.masterVolume.collect { volume -> _menu.value = _menu.value.copy(masterVolume = volume) }
+        }
         // Knob FISICO girado no pedal (0x0309) -> reflete no knob virtual da UI.
         parameterChangesJob?.cancel()
         parameterChangesJob = viewModelScope.launch {
@@ -651,6 +703,9 @@ class PedalViewModel : ViewModel() {
         statePollingJob = null
         parameterChangesJob?.cancel()
         parameterChangesJob = null
+        masterVolumeJob?.cancel()
+        masterVolumeJob = null
+        _menu.value = _menu.value.copy(masterVolume = null)
         knobWriteJobs.values.forEach(Job::cancel)
         knobWriteJobs.clear()
     }

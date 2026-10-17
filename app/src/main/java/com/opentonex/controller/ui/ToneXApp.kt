@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.opentonex.controller.protocol.GlobalSetting
 import com.opentonex.controller.ui.theme.ToneXOnSurface
 import com.opentonex.controller.ui.theme.ToneXOnSurfaceMuted
 import androidx.annotation.StringRes
@@ -186,7 +187,7 @@ fun ToneXApp(
                 effectDetail = viewModel::effectDetail,
                 onEffectControl = viewModel::updateEffectControl,
                 onMasterVolumeChange = viewModel::updateMasterVolume,
-                onA4ReferenceChange = viewModel::updateA4Reference,
+                onGlobalSettingChange = viewModel::updateGlobalSetting,
                 onThemeChange = viewModel::updateTheme,
                 captureState = captureState,
                 onRefreshState = viewModel::refreshState,
@@ -230,7 +231,7 @@ private fun ConnectedApp(
     effectDetail: (EffectSlotType) -> EffectDetailUiState,
     onEffectControl: (EffectSlotType, EffectControl, Float) -> Unit,
     onMasterVolumeChange: (Float) -> Unit,
-    onA4ReferenceChange: (Int) -> Unit,
+    onGlobalSettingChange: (GlobalSetting, Float) -> Unit,
     onThemeChange: (TusbTheme) -> Unit,
     captureState: CaptureUiState,
     onRefreshState: () -> Unit,
@@ -259,7 +260,7 @@ private fun ConnectedApp(
                 }
                 ConnectedNavHost(
                     navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
-                    onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onA4ReferenceChange,
+                    onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onGlobalSettingChange,
                     onThemeChange, captureState, onRefreshState, onStartCapture, onStopCapture,
                     onDisconnect, midiController, modifier = Modifier.fillMaxSize()
                 )
@@ -274,7 +275,7 @@ private fun ConnectedApp(
         ) { padding ->
             ConnectedNavHost(
                 navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
-                onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onA4ReferenceChange,
+                onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onGlobalSettingChange,
                 onThemeChange, captureState, onRefreshState, onStartCapture, onStopCapture,
                 onDisconnect, midiController, modifier = Modifier.fillMaxSize().padding(padding)
             )
@@ -301,7 +302,7 @@ private fun ConnectedNavHost(
     effectDetail: (EffectSlotType) -> EffectDetailUiState,
     onEffectControl: (EffectSlotType, EffectControl, Float) -> Unit,
     onMasterVolumeChange: (Float) -> Unit,
-    onA4ReferenceChange: (Int) -> Unit,
+    onGlobalSettingChange: (GlobalSetting, Float) -> Unit,
     onThemeChange: (TusbTheme) -> Unit,
     captureState: CaptureUiState,
     onRefreshState: () -> Unit,
@@ -393,10 +394,9 @@ private fun ConnectedNavHost(
                 captureFilePath = captureState.currentFilePath,
                 lastCaptureFilePath = captureState.lastFilePath,
                 masterVolume = menuState.masterVolume,
-                a4ReferenceOverride = menuState.a4ReferenceOverride,
                 theme = menuState.theme,
                 onMasterVolumeChange = onMasterVolumeChange,
-                onA4ReferenceChange = onA4ReferenceChange,
+                onGlobalSettingChange = onGlobalSettingChange,
                 onThemeChange = onThemeChange,
                 onRefreshState = onRefreshState,
                 onStartCapture = onStartCapture,

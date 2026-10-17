@@ -4,16 +4,13 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.media.AudioFormat
-import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.media.ToneGenerator
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,30 +25,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,150 +47,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.opentonex.controller.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private const val MIN_BPM = 40
-private const val MAX_BPM = 240
-private const val TAP_WINDOW_MS = 2500L
 private const val TUNER_SAMPLE_RATE = 44_100
 private const val TUNER_WINDOW_SIZE = 4096
 
 @Composable
 fun ToolsScreen(modifier: Modifier = Modifier) {
-    var bpm by remember { mutableIntStateOf(120) }
-    var isPlaying by remember { mutableStateOf(false) }
-    var flashBeat by remember { mutableStateOf(false) }
-    val tapTimestamps = remember { mutableListOf<Long>() }
-
-    val toneGenerator = remember {
-        runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 80) }.getOrNull()
-    }
-    DisposableEffect(Unit) {
-        onDispose { toneGenerator?.release() }
-    }
-
-    val latestBpm = rememberUpdatedState(bpm)
-    LaunchedEffect(isPlaying) {
-        if (!isPlaying) return@LaunchedEffect
-        while (true) {
-            toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 60)
-            flashBeat = true
-            delay(80)
-            flashBeat = false
-            delay((60_000L / latestBpm.value) - 80)
-        }
-    }
-
     LazyColumn(
         modifier = modifier.fillMaxSize().padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item {
-            MetronomePanel(
-                bpm = bpm,
-                isPlaying = isPlaying,
-                flashBeat = flashBeat,
-                onBpmChange = { bpm = it.coerceIn(MIN_BPM, MAX_BPM) },
-                onTogglePlaying = { isPlaying = !isPlaying },
-                onTap = {
-                    val now = System.currentTimeMillis()
-                    tapTimestamps.removeAll { now - it > TAP_WINDOW_MS }
-                    tapTimestamps.add(now)
-                    if (tapTimestamps.size >= 2) {
-                        val avgMs = tapTimestamps.zipWithNext { a, b -> b - a }.average()
-                        if (avgMs > 0) {
-                            bpm = (60_000.0 / avgMs).toInt().coerceIn(MIN_BPM, MAX_BPM)
-                        }
-                    }
-                }
-            )
-        }
+        item { MetronomePanel() }
         item { TunerPanel() }
-    }
-}
-
-@Composable
-private fun MetronomePanel(
-    bpm: Int,
-    isPlaying: Boolean,
-    flashBeat: Boolean,
-    onBpmChange: (Int) -> Unit,
-    onTogglePlaying: () -> Unit,
-    onTap: () -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(R.string.metronome_title),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-
-        Surface(
-            modifier = Modifier.size(64.dp),
-            shape = CircleShape,
-            color = if (flashBeat) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-        ) {}
-
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            IconButton(onClick = { onBpmChange(bpm - 1) }) {
-                Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.bpm_decrease))
-            }
-            Text(text = "$bpm", style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
-            IconButton(onClick = { onBpmChange(bpm + 1) }) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.bpm_increase))
-            }
-        }
-        Text(text = "BPM", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-        Slider(
-            value = bpm.toFloat(),
-            onValueChange = { onBpmChange(it.toInt()) },
-            valueRange = MIN_BPM.toFloat()..MAX_BPM.toFloat(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(
-                onClick = onTogglePlaying,
-                modifier = Modifier.weight(1f),
-                colors = if (isPlaying) {
-                    ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                } else {
-                    ButtonDefaults.buttonColors()
-                }
-            ) {
-                Icon(if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, contentDescription = null)
-                Text(
-                    text = if (isPlaying) stringResource(R.string.stop) else stringResource(R.string.play),
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-            }
-            OutlinedButton(onClick = onTap, modifier = Modifier.weight(1f)) {
-                Text(text = stringResource(R.string.tap))
-            }
-        }
-
-        Text(
-            text = stringResource(R.string.metronome_note),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
     }
 }
 

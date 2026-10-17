@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -36,6 +38,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -100,16 +104,14 @@ fun PresetsScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var editingPreset by remember { mutableStateOf<LibraryPreset?>(null) }
-    val visiblePresets = remember(libraryPresets, searchQuery, customizations) {
+    var showFilters by remember { mutableStateOf(false) }
+    // Sobrevive a troca de aba/rotacao; o filtro e' so' da exibicao local.
+    var filter by rememberSaveable(stateSaver = PresetFilterSaver) { mutableStateOf(PresetFilter()) }
+    val visiblePresets = remember(libraryPresets, searchQuery, customizations, filter) {
         val source = libraryPresets.ifEmpty {
             (0 until 20).map { index -> LibraryPreset(index = index, name = "Preset ${index + 1}", color = fallbackPresetColor(index)) }
         }
-        if (searchQuery.isBlank()) source
-        else source.filter { preset ->
-            val display = customizations[preset.index]?.name ?: preset.name
-            display.contains(searchQuery, ignoreCase = true) ||
-                preset.name.contains(searchQuery, ignoreCase = true)
-        }
+        source.applyPresetFilter(filter, customizations, searchQuery)
     }
 
     Box(
@@ -139,12 +141,19 @@ fun PresetsScreen(
             onToggleBypass = onToggleBypass
         )
 
-        // Busca
-        SearchField(
-            query = searchQuery,
-            onQueryChange = { searchQuery = it },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
-        )
+        // Busca + filtros
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SearchField(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                modifier = Modifier.weight(1f)
+            )
+            PresetFilterButton(count = filter.activeCount, onClick = { showFilters = true })
+        }
 
         // Lista de presets da biblioteca no estilo do design
         LazyColumn(
@@ -152,6 +161,16 @@ fun PresetsScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            if (visiblePresets.isEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.presets_no_results),
+                        fontSize = 13.sp,
+                        color = ToneXOnSurfaceMuted,
+                        modifier = Modifier.fillMaxWidth().padding(24.dp)
+                    )
+                }
+            }
             items(visiblePresets, key = { it.index }) { preset ->
                 val slotBadge = slotForPreset(preset, presets)
                 val isActive = slotBadge != null && slotBadge == activeSlot
@@ -162,10 +181,17 @@ fun PresetsScreen(
                     accent = preset.color.toColor(),
                     slotBadge = slotBadge,
                     isActive = isActive,
+                    favorite = custom?.favorite == true,
                     // Nomes manuais tem prioridade; sem eles, o preset ATIVO usa o 0x0304
                     rigLine = manualRigLine(custom)
                         ?: if (isActive) rigLine(activeAmpEnabled, activeCabLabel) else null,
                     enabled = !isBusy,
+                    onToggleFavorite = if (onSaveCustomization != null) {
+                        {
+                            val base = custom ?: PresetCustomization()
+                            onSaveCustomization(preset.index, base.copy(favorite = !base.favorite))
+                        }
+                    } else null,
                     onClick = { onLoadPreset(preset.index) },
                     onLongClick = if (onSaveCustomization != null) {
                         { editingPreset = preset }
@@ -174,6 +200,14 @@ fun PresetsScreen(
             }
         }
     }
+    }
+
+    if (showFilters) {
+        PresetFilterDialog(
+            filter = filter,
+            onChange = { filter = it },
+            onDismiss = { showFilters = false }
+        )
     }
 
     val editing = editingPreset
@@ -256,8 +290,10 @@ private fun PresetListRow(
     accent: Color,
     slotBadge: Slot?,
     isActive: Boolean,
+    favorite: Boolean,
     rigLine: String? = null,
     enabled: Boolean,
+    onToggleFavorite: (() -> Unit)? = null,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null
 ) {
@@ -276,12 +312,23 @@ private fun PresetListRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                imageVector = if (isActive) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                contentDescription = null,
-                tint = if (isActive) ToneXAccent else ToneXOnSurfaceFaint,
-                modifier = Modifier.size(20.dp)
-            )
+            // Estrela = favorito local (toque); o preset ativo e' destacado pelo fundo da linha.
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .clickable(enabled = enabled && onToggleFavorite != null) { onToggleFavorite?.invoke() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (favorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                    contentDescription = stringResource(
+                        if (favorite) R.string.preset_favorite_remove else R.string.preset_favorite_add
+                    ),
+                    tint = if (favorite) ToneXAccent else ToneXOnSurfaceFaint,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -330,6 +377,9 @@ private fun PresetEditDialog(
     var name by remember(preset.index) { mutableStateOf(current.name ?: preset.name) }
     var amp by remember(preset.index) { mutableStateOf(current.ampName.orEmpty()) }
     var cab by remember(preset.index) { mutableStateOf(current.cabName.orEmpty()) }
+    var instrument by remember(preset.index) { mutableStateOf(current.instrument) }
+    var genre by remember(preset.index) { mutableStateOf(current.genre) }
+    var character by remember(preset.index) { mutableStateOf(current.character) }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = ToneXSurfaceVariant,
@@ -342,7 +392,10 @@ private fun PresetEditDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
                 androidx.compose.material3.OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -361,6 +414,27 @@ private fun PresetEditDialog(
                     label = { Text(stringResource(R.string.preset_edit_cab)) },
                     singleLine = true
                 )
+                TagChooser(
+                    title = R.string.filters_instrument,
+                    options = PresetInstrument.entries,
+                    selected = instrument,
+                    label = { stringResource(it.labelRes()) },
+                    onSelect = { instrument = it }
+                )
+                TagChooser(
+                    title = R.string.filters_genre,
+                    options = PresetGenre.entries,
+                    selected = genre,
+                    label = { stringResource(it.labelRes()) },
+                    onSelect = { genre = it }
+                )
+                TagChooser(
+                    title = R.string.filters_character,
+                    options = PresetCharacter.entries,
+                    selected = character,
+                    label = { stringResource(it.labelRes()) },
+                    onSelect = { character = it }
+                )
                 Text(
                     text = stringResource(R.string.preset_edit_hint),
                     fontSize = 11.sp,
@@ -374,7 +448,11 @@ private fun PresetEditDialog(
                     PresetCustomization(
                         name = name.takeIf { it.isNotBlank() && it != preset.name },
                         ampName = amp.takeIf { it.isNotBlank() },
-                        cabName = cab.takeIf { it.isNotBlank() }
+                        cabName = cab.takeIf { it.isNotBlank() },
+                        favorite = current.favorite,
+                        instrument = instrument,
+                        genre = genre,
+                        character = character
                     )
                 )
             }) { Text(stringResource(R.string.preset_edit_save), color = ToneXAccent) }
@@ -518,3 +596,8 @@ private fun fallbackPresetColor(index: Int): Rgb = when (index % 5) {
 }
 
 private fun Rgb.toColor(): Color = Color(r, g, b)
+
+private val PresetFilterSaver = Saver<PresetFilter, String>(
+    save = { it.encode() },
+    restore = { PresetFilter.decode(it) }
+)

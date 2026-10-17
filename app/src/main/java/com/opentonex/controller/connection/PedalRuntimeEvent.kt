@@ -48,6 +48,12 @@ sealed interface PedalRuntimeEvent {
         val payloadHex: String
     ) : PedalRuntimeEvent
 
+    /** Volume master (0..10) informado pelo pedal: 0x0309 com subtipo 0x03. */
+    data class MasterVolumeChanged(
+        val value: Float,
+        val payloadHex: String
+    ) : PedalRuntimeEvent
+
     data class TransportError(
         val errorMessage: String,
         val payloadHex: String? = null

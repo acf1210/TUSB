@@ -31,5 +31,14 @@ interface PedalConnection {
      * [paramIndex] e o indice na tabela tonex_params e [value] o valor real (ex.: gain 0..10).
      */
     suspend fun writeParameter(paramIndex: Int, value: Float)
+    /**
+     * Grava os ajustes globais (trim, A4, tempo...) reenviando [state].rawState, que ja traz os
+     * bytes alterados, com o slot e o bypass de [state]. O padrao reaproveita [writeState].
+     */
+    suspend fun writeGlobalState(state: PedalState) = writeState(state)
+    /** Volume master do pedal (0..10), comando proprio fora do StateData. */
+    suspend fun writeMasterVolume(value: Float) {}
+    /** Pede o volume master; a resposta chega como [PedalRuntimeEvent.MasterVolumeChanged]. */
+    suspend fun requestMasterVolume() {}
     suspend fun disconnect()
 }

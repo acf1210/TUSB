@@ -227,6 +227,69 @@ class PedalViewModelTest {
         assertEquals(2, viewModel.effectDetail(EffectSlotType.CAB).cabinetType)
     }
 
+    @Test fun `updateEffectControl model writes the reverb model parameter`() = runTest {
+        val fake = FakePedalConnection()
+        val viewModel = PedalViewModel()
+        viewModel.connectWith(fake)
+        advanceUntilIdle()
+
+        viewModel.updateEffectControl(EffectSlotType.REV, EffectControl.MODEL, 4f)
+        advanceUntilIdle()
+
+        // REVERB_MODEL = indice 38.
+        assertEquals(4f, fake.parameters[38] ?: Float.NaN, 0.0001f)
+    }
+
+    @Test fun `updateEffectControl model clamps to the parameter range`() = runTest {
+        val fake = FakePedalConnection()
+        val viewModel = PedalViewModel()
+        viewModel.connectWith(fake)
+        advanceUntilIdle()
+
+        viewModel.updateEffectControl(EffectSlotType.DLY, EffectControl.MODEL, 5f)
+        advanceUntilIdle()
+
+        // DELAY_MODEL = indice 96, range 0..1.
+        assertEquals(1f, fake.parameters[96] ?: Float.NaN, 0.0001f)
+    }
+
+    @Test fun `updateEffectControl model updates effect detail`() = runTest {
+        val connection = ParameterStatePedalConnection()
+        val viewModel = PedalViewModel()
+        viewModel.connectWith(connection)
+        advanceUntilIdle()
+
+        viewModel.updateEffectControl(EffectSlotType.MOD, EffectControl.MODEL, 3f)
+        advanceUntilIdle()
+
+        assertEquals(3, viewModel.effectDetail(EffectSlotType.MOD).model)
+    }
+
+    @Test fun `effect detail has no model for blocks without model choice`() = runTest {
+        val viewModel = PedalViewModel()
+        viewModel.connectWith(ParameterStatePedalConnection())
+        advanceUntilIdle()
+
+        assertEquals(null, viewModel.effectDetail(EffectSlotType.GATE).model)
+        assertEquals(null, viewModel.effectDetail(EffectSlotType.CAB).model)
+        assertEquals(0, viewModel.effectDetail(EffectSlotType.REV).model)
+    }
+
+    @Test fun `effect knobs follow the selected reverb model`() = runTest {
+        val connection = ParameterStatePedalConnection()
+        val viewModel = PedalViewModel()
+        viewModel.connectWith(connection)
+        advanceUntilIdle()
+
+        viewModel.updateEffectControl(EffectSlotType.REV, EffectControl.MODEL, 2f)
+        advanceUntilIdle()
+        viewModel.updateEffectControl(EffectSlotType.REV, EffectControl.KNOB_A, 1f) // MIX do modelo 2
+        advanceUntilIdle()
+
+        val mix = TonexEffectParams.reverbMix(2)
+        assertEquals(mix.max, connection.requestState().presetParameters[mix.index], 0.0001f)
+    }
+
     @Test fun `initial state is Disconnected`() {
         val viewModel = PedalViewModel()
         assertEquals(ConnectionState.Disconnected, viewModel.state.value)

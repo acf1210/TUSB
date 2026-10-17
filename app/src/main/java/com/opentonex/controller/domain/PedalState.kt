@@ -1,5 +1,8 @@
 package com.opentonex.controller.domain
 
+import com.opentonex.controller.protocol.GlobalSetting
+import com.opentonex.controller.protocol.TonexGlobals
+
 enum class Slot { A, B, C }
 
 enum class PedalMode { AB, STOMP }
@@ -74,6 +77,10 @@ data class PedalState(
      * false = sinal ativo (pedal processa o audio); true = bypass (sinal passa direto).
      */
     val bypassMode: Boolean = false,
+    /** true = o pedal segue o BPM de cada preset; false = BPM global. */
+    val tempoFromPreset: Boolean = false,
+    /** true = o som passa enquanto o afinador esta ligado; false = saida mutada. */
+    val tunerThru: Boolean = true,
     /**
      * TODOS os floats do bloco de parametros do detalhe 0x0304 do preset ATIVO, na ordem
      * da tabela tonex_params. Necessario para os controles de efeito com indice dinamico
@@ -245,6 +252,23 @@ data class PedalState(
         return copy(slots = updatedSlots)
     }
 
+    /**
+     * Ajuste global refletido nos campos tipados e no [rawState] (que e reenviado ao pedal).
+     * Um [rawState] vazio (simulador) muda so os campos; um estado com layout desconhecido
+     * propaga a [IllegalArgumentException] de [TonexGlobals.write] para nao gravar lixo.
+     */
+    fun withGlobal(setting: GlobalSetting, value: Float): PedalState {
+        val clamped = value.coerceIn(setting.min, setting.max)
+        val raw = if (rawState.isEmpty()) rawState else TonexGlobals.write(rawState, setting, clamped)
+        return when (setting) {
+            GlobalSetting.INPUT_TRIM -> copy(inputTrim = clamped, rawState = raw)
+            GlobalSetting.TUNER_REFERENCE -> copy(a4Reference = Math.round(clamped), rawState = raw)
+            GlobalSetting.TEMPO -> copy(tempo = Math.round(clamped), rawState = raw)
+            GlobalSetting.TEMPO_SOURCE -> copy(tempoFromPreset = clamped >= 0.5f, rawState = raw)
+            GlobalSetting.TUNER_OUTPUT -> copy(tunerThru = clamped >= 0.5f, rawState = raw)
+        }
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is PedalState) return false
@@ -258,6 +282,8 @@ data class PedalState(
             pedalMode == other.pedalMode &&
             cabSimBypass == other.cabSimBypass &&
             bypassMode == other.bypassMode &&
+            tempoFromPreset == other.tempoFromPreset &&
+            tunerThru == other.tunerThru &&
             presetParameters == other.presetParameters &&
             rawState.contentEquals(other.rawState)
     }
@@ -273,6 +299,8 @@ data class PedalState(
         result = 31 * result + pedalMode.hashCode()
         result = 31 * result + cabSimBypass.hashCode()
         result = 31 * result + bypassMode.hashCode()
+        result = 31 * result + tempoFromPreset.hashCode()
+        result = 31 * result + tunerThru.hashCode()
         result = 31 * result + presetParameters.hashCode()
         result = 31 * result + rawState.contentHashCode()
         return result

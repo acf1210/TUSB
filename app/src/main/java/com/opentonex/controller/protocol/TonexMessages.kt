@@ -436,7 +436,9 @@ object TonexMessages {
             presetIds = walk.presetIds,
             pedalMode = if (walk.stompMode) PedalMode.STOMP else PedalMode.AB,
             cabSimBypass = walk.cabSimBypass,
-            bypassMode = walk.bypassMode
+            bypassMode = walk.bypassMode,
+            tempoFromPreset = walk.tempoFromPreset,
+            tunerThru = walk.tunerThru
         )
     }
 
@@ -487,7 +489,9 @@ object TonexMessages {
         val presetIds: List<Int>,
         val stompMode: Boolean,
         val cabSimBypass: Boolean,
-        val bypassMode: Boolean = false
+        val bypassMode: Boolean = false,
+        val tempoFromPreset: Boolean = false,
+        val tunerThru: Boolean = true
     )
 
     private fun walkFields(payload: ByteArray, fieldsOffset: Int): FieldsWalk {
@@ -495,7 +499,8 @@ object TonexMessages {
         val trim = TaggedValue.decodeFloat(payload, offset); offset = trim.nextOffset
         val stompMode = (payload[offset].toInt() and 0xFF) != 0
         val cabSimBypass = (payload[offset + 1].toInt() and 0xFF) != 0
-        offset += 3 // stompMode + cabSimBypass + tuningMode (bytes crus; so stompMode e usado)
+        val tunerThru = (payload[offset + 2].toInt() and 0xFF) != 0
+        offset += 3 // stompMode + cabSimBypass + tuningMode (bytes crus)
 
         if ((payload[offset].toInt() and 0xFF) != RGB_COLLECTION_TAG) {
             throw PedalStateParseException(
@@ -549,8 +554,9 @@ object TonexMessages {
         offset++
 
         val a4 = TaggedValue.decodeU16(payload, offset); offset = a4.nextOffset
-        offset += 1 // directMonitor (byte cru, ainda nao usado na UI)
-        offset += 1 // tempoSource (byte cru, ainda nao usado na UI)
+        offset += 1 // directMonitor (byte cru, sempre regravado como ON)
+        val tempoFromPreset = (payload[offset].toInt() and 0xFF) != 0
+        offset += 1 // tempoSource
 
         val tempo = TaggedValue.decodeFloat(payload, offset)
 
@@ -571,7 +577,9 @@ object TonexMessages {
             presetIds = presetIds,
             stompMode = stompMode,
             cabSimBypass = cabSimBypass,
-            bypassMode = bypassMode
+            bypassMode = bypassMode,
+            tempoFromPreset = tempoFromPreset,
+            tunerThru = tunerThru
         )
     }
 

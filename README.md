@@ -64,12 +64,27 @@
   <img src="docs/assets/screenshots/01-editor.png" width="180" alt="Editor" />
   <img src="docs/assets/screenshots/02-presets.png" width="180" alt="Presets" />
   <img src="docs/assets/screenshots/03-effect-detail.png" width="180" alt="Effect detail" />
-  <img src="docs/assets/screenshots/04-menu.png" width="180" alt="Menu" />
+  <img src="docs/assets/screenshots/04-menu.png" width="180" alt="Menu: pedal volume and trim" />
+</p>
+<p align="center">
+  <img src="docs/assets/screenshots/05-preset-filters.png" width="180" alt="Preset filters" />
+  <img src="docs/assets/screenshots/06-tools.png" width="180" alt="Metronome" />
+  <img src="docs/assets/screenshots/07-menu-tuner.png" width="180" alt="Menu: tuner settings" />
 </p>
 
 ---
 
 ## 🇧🇷 Português Brasil
+
+### Novidades no main (ainda sem release)
+
+- Ajustes do pedal gravados via USB no Menu: volume master, trim de entrada, referência A4,
+  saída com o afinador ligado (mudo/passar som), BPM global e fonte do tempo. Validados no
+  ToneX One real.
+- Seletor de modelo em Reverb, Modulação e Delay, com os knobs acompanhando o modelo.
+- Presets com favoritos, classificação por instrumento, gênero e caráter, filtros e ordenação.
+- Metrônomo completo: compasso, roda de BPM, TAP, timbre, volume e acento.
+- Protocolo dos ajustes globais documentado em [docs/protocol-notes.md](docs/protocol-notes.md).
 
 ### Destaques da V1.0.6
 
@@ -128,8 +143,12 @@ controlar efeitos e manter o app sincronizado com o pedal em tempo real.
 - Alternância entre modo A/B e modo Stomp.
 - Bypass geral e bypass IR/Cab.
 - Knobs de amplificador em tempo real.
-- Cadeia de efeitos editável: Gate, Compressor, EQ, Mod, Delay, Reverb e Cab.
-- Metrônomo local.
+- Cadeia de efeitos editável: Gate, Compressor, EQ, Mod, Delay, Reverb e Cab, com seletor de
+  modelo em Reverb, Mod e Delay.
+- Ajustes globais gravados no pedal: volume master, trim, A4, afinador mudo/thru, BPM e fonte
+  do tempo.
+- Presets com favoritos, classificação, filtros e ordenação.
+- Metrônomo com compasso, roda de BPM, TAP, timbre, volume e acento.
 - Afinador por microfone com afinações comuns.
 - Controle por footswitch MIDI (BLE e USB) com MIDI Learn.
 - Captura JSONL para diagnóstico.
@@ -154,6 +173,15 @@ O APK debug fica em `app/build/outputs/apk/debug/app-debug.apk`.
 ---
 
 ## 🇺🇸 English US
+
+### New on main (not released yet)
+
+- Pedal settings written over USB from the Menu: master volume, input trim, A4 reference,
+  output while tuning (mute/thru), global BPM, and tempo source. Validated on a real ToneX One.
+- Model selector for Reverb, Modulation, and Delay, with the knobs following the model.
+- Presets with favorites, instrument/genre/character tags, filters, and sorting.
+- Full metronome: time signature, BPM wheel, TAP, tone, volume, and accent.
+- Global-settings protocol documented in [docs/protocol-notes.md](docs/protocol-notes.md).
 
 ### V1.0.6 highlights
 
@@ -212,8 +240,12 @@ effects, and keep the app synchronized with the pedal in real time.
 - A/B and Stomp mode switching.
 - Global bypass and IR/Cab bypass.
 - Real-time amp knobs.
-- Editable effect chain: Gate, Compressor, EQ, Mod, Delay, Reverb, and Cab.
-- Local metronome.
+- Editable effect chain: Gate, Compressor, EQ, Mod, Delay, Reverb, and Cab, with a model
+  selector for Reverb, Mod, and Delay.
+- Global settings written to the pedal: master volume, trim, A4, tuner mute/thru, BPM, and
+  tempo source.
+- Presets with favorites, tags, filters, and sorting.
+- Metronome with time signature, BPM wheel, TAP, tone, volume, and accent.
 - Microphone tuner with common tunings.
 - MIDI footswitch control (BLE and USB) with MIDI Learn.
 - JSONL capture for diagnostics.
@@ -238,6 +270,16 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 ---
 
 ## 🇪🇸 Español
+
+### Novedades en main (aún sin release)
+
+- Ajustes del pedal guardados por USB desde el Menú: volumen master, trim de entrada,
+  referencia A4, salida con el afinador activo (silencio/pasar sonido), BPM global y fuente
+  del tempo. Validados en un ToneX One real.
+- Selector de modelo en Reverb, Modulación y Delay, con los knobs siguiendo el modelo.
+- Presets con favoritos, clasificación por instrumento, género y carácter, filtros y orden.
+- Metrónomo completo: compás, rueda de BPM, TAP, timbre, volumen y acento.
+- Protocolo de los ajustes globales documentado en [docs/protocol-notes.md](docs/protocol-notes.md).
 
 ### Novedades de la V1.0.6
 
@@ -296,8 +338,12 @@ controlar efectos y mantener la app sincronizada con el pedal en tiempo real.
 - Cambio entre modo A/B y modo Stomp.
 - Bypass general y bypass IR/Cab.
 - Knobs de amplificador en tiempo real.
-- Cadena de efectos editable: Gate, Compressor, EQ, Mod, Delay, Reverb y Cab.
-- Metrónomo local.
+- Cadena de efectos editable: Gate, Compressor, EQ, Mod, Delay, Reverb y Cab, con selector de
+  modelo en Reverb, Mod y Delay.
+- Ajustes globales guardados en el pedal: volumen master, trim, A4, afinador silencio/thru,
+  BPM y fuente del tempo.
+- Presets con favoritos, clasificación, filtros y orden.
+- Metrónomo con compás, rueda de BPM, TAP, timbre, volumen y acento.
 - Afinador por micrófono con afinaciones comunes.
 - Control por footswitch MIDI (BLE y USB) con MIDI Learn.
 - Captura JSONL para diagnóstico.
@@ -333,7 +379,9 @@ projetos open-source da comunidade. Agradecemos às seguintes fontes:
   slot/preset.
 - [`Builty/TonexOneController`](https://github.com/Builty/TonexOneController) — firmware
   ESP32 open-source; segunda validação independente do protocolo (Hello/wake, RequestState,
-  baud 115200) e tabela de ranges de parâmetros (`tonex_params.c`).
+  baud 115200), tabela de ranges de parâmetros (`tonex_params.c`) e mapa dos ajustes globais e
+  do volume master (`usb_tonex_one.c`), conferidos contra capturas deste projeto e testados
+  no pedal.
 - [Android MIDI API](https://developer.android.com/reference/android/media/midi/package-summary)
   (`android.media.midi`) e a especificação **BLE MIDI** da MIDI Association para o suporte a
   footswitches na V1.0.2.
@@ -347,7 +395,9 @@ projects. We thank the following sources:
   firmware used as a reference to validate HDLC/CRC framing and slot/preset offsets.
 - [`Builty/TonexOneController`](https://github.com/Builty/TonexOneController) — open-source
   ESP32 firmware; a second independent validation of the protocol (Hello/wake, RequestState,
-  baud 115200) and parameter-range table (`tonex_params.c`).
+  baud 115200), parameter-range table (`tonex_params.c`), and the global-settings and
+  master-volume map (`usb_tonex_one.c`), checked against this project's captures and tested
+  on the pedal.
 - [Android MIDI API](https://developer.android.com/reference/android/media/midi/package-summary)
   (`android.media.midi`) and the MIDI Association **BLE MIDI** specification for the V1.0.2
   footswitch support.
@@ -362,7 +412,9 @@ proyectos open-source de la comunidad. Agradecemos a las siguientes fuentes:
   slot/preset.
 - [`Builty/TonexOneController`](https://github.com/Builty/TonexOneController) — firmware
   ESP32 open-source; segunda validación independiente del protocolo (Hello/wake,
-  RequestState, baud 115200) y tabla de rangos de parámetros (`tonex_params.c`).
+  RequestState, baud 115200), tabla de rangos de parámetros (`tonex_params.c`) y mapa de los
+  ajustes globales y del volumen master (`usb_tonex_one.c`), contrastados con capturas de
+  este proyecto y probados en el pedal.
 - [Android MIDI API](https://developer.android.com/reference/android/media/midi/package-summary)
   (`android.media.midi`) y la especificación **BLE MIDI** de la MIDI Association para el
   soporte de footswitches en la V1.0.2.

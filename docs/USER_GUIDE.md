@@ -22,10 +22,17 @@ permissão USB do Android.
 - O app envia os valores ao pedal em tempo real.
 - Toque em um bloco da cadeia de efeitos para abrir seus parâmetros.
 - Toque no LED do bloco para ligar/desligar Gate, Compressor, Mod, Delay, Reverb ou Cab.
+- Em Reverb, Modulação e Delay, escolha o modelo na faixa do topo do bloco (Spring 1–4,
+  Room, Plate; Chorus, Tremolo, Phaser, Flanger, Rotary; Digital, Tape). Os knobs passam a
+  controlar o modelo escolhido.
 
 ### Presets
 
 - Use os slots A/B/C para trocar o preset ativo.
+- Toque na estrela para marcar um preset como favorito.
+- Ao editar o preset, classifique-o por instrumento, gênero e caráter.
+- O botão de filtros, ao lado da busca, filtra por favoritos e classificações e ordena por
+  número, nome ou favoritos. Favoritos e classificações ficam salvos só no celular.
 - Em modo Stomp, A, B e C ficam disponíveis como cenas no pedal.
 - Em modo A/B, A e B alternam presets e o terceiro switch controla bypass.
 - Use Bypass para desligar o processamento e IR/Cab para alternar apenas a simulação de
@@ -36,7 +43,9 @@ permissão USB do Android.
 #### Metrônomo
 
 - Use Play/Parar para iniciar ou interromper o clique.
-- Ajuste BPM pelos botões, slider ou botão TAP.
+- Ajuste o BPM (40–240) girando a roda, pelos botões − e + ou tocando TAP no ritmo.
+- Escolha o compasso (2/4, 3/4, 4/4, 5/4, 6/8, 7/8), o timbre, o volume e se o primeiro
+  tempo é acentuado.
 
 #### Afinador
 
@@ -86,8 +95,15 @@ Toggles disparam com valor CC ≥ 64; os knobs usam a faixa completa 0–127.
 
 - Atualize o estado do pedal.
 - Inicie ou pare captura JSONL para diagnóstico.
-- Ajuste a referência A4 local entre 430 e 450 Hz.
 - Desconecte o pedal quando terminar.
+
+Os ajustes abaixo são gravados no próprio pedal e continuam valendo sem o app:
+
+- **Volume:** volume master (0–10) e trim de entrada (−15 a +15 dB). Os sliders gravam ao
+  soltar o dedo.
+- **Afinador:** referência A4 (415–465 Hz) e o que a saída faz com o afinador do pedal
+  ligado (mudo ou passar som). O afinador do pedal é ligado no próprio pedal.
+- **Geral:** BPM global (40–240) e a fonte do tempo (global ou o BPM de cada preset).
 
 ---
 
@@ -107,10 +123,17 @@ permission.
 - The app sends values to the pedal in real time.
 - Tap an effect-chain block to open its parameters.
 - Tap the block LED to enable/disable Gate, Compressor, Mod, Delay, Reverb, or Cab.
+- In Reverb, Modulation, and Delay, pick the model from the strip at the top of the block
+  (Spring 1–4, Room, Plate; Chorus, Tremolo, Phaser, Flanger, Rotary; Digital, Tape). The
+  knobs then control the chosen model.
 
 ### Presets
 
 - Use A/B/C slots to switch the active preset.
+- Tap the star to mark a preset as a favorite.
+- In the preset editor, tag it by instrument, genre, and character.
+- The filter button next to search filters by favorites and tags and sorts by number, name,
+  or favorites. Favorites and tags are stored on the phone only.
 - In Stomp mode, A, B, and C are available as pedal scenes.
 - In A/B mode, A and B switch presets and the third footswitch controls bypass.
 - Use Bypass to turn processing off and IR/Cab to toggle only cabinet simulation.
@@ -120,7 +143,9 @@ permission.
 #### Metronome
 
 - Use Play/Stop to start or stop the click.
-- Adjust BPM with buttons, slider, or TAP.
+- Set the BPM (40–240) by turning the wheel, with the − and + buttons, or by tapping TAP in time.
+- Choose the time signature (2/4, 3/4, 4/4, 5/4, 6/8, 7/8), the tone, the volume, and
+  whether the first beat is accented.
 
 #### Tuner
 
@@ -170,8 +195,15 @@ Toggles fire with CC value ≥ 64; knobs use the full 0–127 range.
 
 - Refresh the pedal state.
 - Start or stop JSONL capture for diagnostics.
-- Adjust the local A4 reference between 430 and 450 Hz.
 - Disconnect the pedal when done.
+
+The settings below are written to the pedal itself and keep working without the app:
+
+- **Volume:** master volume (0–10) and input trim (−15 to +15 dB). The sliders write when
+  you lift your finger.
+- **Tuner:** A4 reference (415–465 Hz) and what the output does while the pedal tuner is on
+  (mute or thru). The pedal tuner is turned on at the pedal.
+- **General:** global BPM (40–240) and the tempo source (global or each preset's BPM).
 
 ---
 
@@ -191,10 +223,17 @@ de Android.
 - La app envía los valores al pedal en tiempo real.
 - Toca un bloque de la cadena de efectos para abrir sus parámetros.
 - Toca el LED del bloque para activar/desactivar Gate, Compressor, Mod, Delay, Reverb o Cab.
+- En Reverb, Modulación y Delay, elige el modelo en la franja superior del bloque (Spring
+  1–4, Room, Plate; Chorus, Tremolo, Phaser, Flanger, Rotary; Digital, Tape). Los knobs
+  pasan a controlar el modelo elegido.
 
 ### Presets
 
 - Usa los slots A/B/C para cambiar el preset activo.
+- Toca la estrella para marcar un preset como favorito.
+- En la edición del preset, clasifícalo por instrumento, género y carácter.
+- El botón de filtros, junto a la búsqueda, filtra por favoritos y clasificaciones y ordena
+  por número, nombre o favoritos. Favoritos y clasificaciones se guardan solo en el teléfono.
 - En modo Stomp, A, B y C quedan disponibles como escenas del pedal.
 - En modo A/B, A y B alternan presets y el tercer footswitch controla bypass.
 - Usa Bypass para apagar el procesamiento e IR/Cab para alternar solo la simulación de
@@ -205,7 +244,9 @@ de Android.
 #### Metrónomo
 
 - Usa Play/Detener para iniciar o detener el click.
-- Ajusta BPM con botones, slider o TAP.
+- Ajusta el BPM (40–240) girando la rueda, con los botones − y + o tocando TAP al ritmo.
+- Elige el compás (2/4, 3/4, 4/4, 5/4, 6/8, 7/8), el timbre, el volumen y si el primer
+  tiempo va acentuado.
 
 #### Afinador
 
@@ -255,5 +296,12 @@ Los toggles se disparan con valor CC ≥ 64; los knobs usan el rango completo 0�
 
 - Actualiza el estado del pedal.
 - Inicia o detén la captura JSONL para diagnóstico.
-- Ajusta la referencia A4 local entre 430 y 450 Hz.
 - Desconecta el pedal al terminar.
+
+Los ajustes siguientes se guardan en el propio pedal y siguen valiendo sin la app:
+
+- **Volumen:** volumen master (0–10) y trim de entrada (−15 a +15 dB). Los sliders guardan
+  al soltar el dedo.
+- **Afinador:** referencia A4 (415–465 Hz) y qué hace la salida con el afinador del pedal
+  activo (silencio o pasar sonido). El afinador del pedal se activa en el propio pedal.
+- **General:** BPM global (40–240) y la fuente del tempo (global o el BPM de cada preset).

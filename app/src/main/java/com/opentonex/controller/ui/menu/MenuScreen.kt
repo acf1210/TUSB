@@ -9,13 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -25,7 +19,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.annotation.StringRes
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import com.opentonex.controller.R
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.midi.MidiController
+import com.opentonex.controller.protocol.GlobalSetting
 import com.opentonex.controller.ui.theme.TusbTheme
 
 private enum class MenuTab(@StringRes val labelRes: Int) {
@@ -54,11 +48,10 @@ fun MenuScreen(
     isCapturing: Boolean,
     captureFilePath: String?,
     lastCaptureFilePath: String?,
-    masterVolume: Float,
-    a4ReferenceOverride: Int,
+    masterVolume: Float?,
     theme: TusbTheme,
     onMasterVolumeChange: (Float) -> Unit,
-    onA4ReferenceChange: (Int) -> Unit,
+    onGlobalSettingChange: (GlobalSetting, Float) -> Unit,
     onThemeChange: (TusbTheme) -> Unit,
     onRefreshState: () -> Unit,
     onStartCapture: () -> Unit,
@@ -97,22 +90,18 @@ fun MenuScreen(
                     onStopCapture = onStopCapture,
                     onDisconnect = onDisconnect
                 )
-                MenuTab.VOLUME -> VolumeTab(
+                MenuTab.VOLUME -> VolumeSettings(
                     masterVolume = masterVolume,
-                    inputTrim = pedal.inputTrim,
-                    onMasterVolumeChange = onMasterVolumeChange
+                    pedal = pedal,
+                    onMasterVolumeChange = onMasterVolumeChange,
+                    onGlobalSettingChange = onGlobalSettingChange
                 )
                 MenuTab.MIDI -> MidiTab(controller = midiController)
-                MenuTab.TUNER -> TunerTab(
-                    a4ReferenceOverride = a4ReferenceOverride,
-                    pedalA4Reference = pedal.a4Reference,
-                    onA4ReferenceChange = onA4ReferenceChange
-                )
-                MenuTab.GENERAL -> GeneralTab(
-                    tempo = pedal.tempo,
-                    theme = theme,
-                    onThemeChange = onThemeChange
-                )
+                MenuTab.TUNER -> TunerSettings(pedal = pedal, onGlobalSettingChange = onGlobalSettingChange)
+                MenuTab.GENERAL -> {
+                    TempoSettings(pedal = pedal, onGlobalSettingChange = onGlobalSettingChange)
+                    GeneralTab(theme = theme, onThemeChange = onThemeChange)
+                }
             }
         }
     }
@@ -157,59 +146,7 @@ private fun DeviceTab(
 }
 
 @Composable
-private fun VolumeTab(masterVolume: Float, inputTrim: Float, onMasterVolumeChange: (Float) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = "Master Volume", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Text(text = "${(masterVolume * 100).toInt()}%", style = MaterialTheme.typography.labelMedium)
-            }
-            Slider(value = masterVolume, onValueChange = onMasterVolumeChange)
-            Text(
-                text = stringResource(R.string.menu_master_volume_note),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(text = "Input Trim", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-            Text(text = "%.2f dB".format(inputTrim), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                text = stringResource(R.string.menu_input_trim_real),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun TunerTab(a4ReferenceOverride: Int, pedalA4Reference: Int, onA4ReferenceChange: (Int) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(text = stringResource(R.string.menu_a4_reference), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                IconButton(onClick = { onA4ReferenceChange(a4ReferenceOverride - 1) }) {
-                    Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.menu_decrease))
-                }
-                Text(text = "$a4ReferenceOverride Hz", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                IconButton(onClick = { onA4ReferenceChange(a4ReferenceOverride + 1) }) {
-                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.menu_increase))
-                }
-            }
-            Text(
-                text = stringResource(R.string.menu_a4_note, pedalA4Reference),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun GeneralTab(tempo: Int, theme: TusbTheme, onThemeChange: (TusbTheme) -> Unit) {
+private fun GeneralTab(theme: TusbTheme, onThemeChange: (TusbTheme) -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(text = stringResource(R.string.menu_theme), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
@@ -229,22 +166,5 @@ private fun GeneralTab(tempo: Int, theme: TusbTheme, onThemeChange: (TusbTheme) 
             )
         }
     }
-    PlaceholderFieldsTab(fields = listOf("Tempo" to "$tempo BPM"))
 }
 
-@Composable
-private fun PlaceholderFieldsTab(fields: List<Pair<String, String>>) {
-    fields.forEach { (label, value) ->
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(text = label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Text(text = value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-    Text(
-        text = stringResource(R.string.menu_visual_only),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-}

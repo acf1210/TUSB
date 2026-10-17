@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,6 +25,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,18 +68,21 @@ fun EffectDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var normalMode by remember(effect) { mutableStateOf(!detail.delayPingPong) }
-    var postPosition by remember(effect) { mutableStateOf(detail.post) }
-    var sync by remember(effect) { mutableStateOf(detail.delaySync) }
-    var knobA by remember(effect) { mutableFloatStateOf(detail.knobA) }
-    var knobB by remember(effect) { mutableFloatStateOf(detail.knobB) }
-    var knobC by remember(effect) { mutableFloatStateOf(detail.knobC) }
+    // Os controles de MOD/DLY/REV apontam para indices diferentes a cada modelo: trocar o
+    // modelo reinicia o estado local com os valores que o pedal tem para o modelo novo.
+    var model by remember(effect, detail.model) { mutableStateOf(detail.model) }
+    var normalMode by remember(effect, detail.model) { mutableStateOf(!detail.delayPingPong) }
+    var postPosition by remember(effect, detail.model) { mutableStateOf(detail.post) }
+    var sync by remember(effect, detail.model) { mutableStateOf(detail.delaySync) }
+    var knobA by remember(effect, detail.model) { mutableFloatStateOf(detail.knobA) }
+    var knobB by remember(effect, detail.model) { mutableFloatStateOf(detail.knobB) }
+    var knobC by remember(effect, detail.model) { mutableFloatStateOf(detail.knobC) }
 
     val (labelA, labelB, labelC) = when (effect) {
         EffectSlotType.GATE -> Triple("THRESHOLD", "DEPTH", "RELEASE")
         EffectSlotType.CMP -> Triple("ATTACK", "THRESHOLD", "MAKEUP")
         EffectSlotType.EQ -> Triple("BASS FREQ", "MID FREQ", "TREBLE FREQ")
-        EffectSlotType.MOD -> Triple("RATE", "DEPTH", "MIX")
+        EffectSlotType.MOD -> EffectModels.modulationKnobLabels(model ?: 0)
         EffectSlotType.DLY -> Triple("TIME", "FEEDBACK", "MIX")
         EffectSlotType.REV -> Triple("MIX", "TIME", "PREDELAY")
         EffectSlotType.CAB -> Triple("MIC BLEND", "RESONANCE", "MIC POSITION")
@@ -126,6 +133,19 @@ fun EffectDetailScreen(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            // Seletor de modelo (reverb, modulacao e delay)
+            val modelNames = EffectModels.namesFor(effect)
+            val activeModel = model
+            if (modelNames.isNotEmpty() && activeModel != null) {
+                ModelSelector(
+                    names = modelNames,
+                    selectedIndex = activeModel,
+                    onSelect = { index ->
+                        model = index
+                        onControlChange(EffectControl.MODEL, index.toFloat())
+                    }
+                )
+            }
             // Seletor de modo do delay: NORMAL / PING PONG
             if (effect == EffectSlotType.DLY) {
                 TusbSegmentedRow(
@@ -230,5 +250,41 @@ fun EffectDetailScreen(
             }
         }
     }
+    }
+}
+
+/**
+ * Faixa rolavel com os modelos do bloco; o selecionado usa o verde dos blocos de efeito e a
+ * faixa abre ja rolada ate ele (Room e Plate ficavam fora da tela em celulares estreitos).
+ */
+@Composable
+private fun ModelSelector(names: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
+    LaunchedEffect(selectedIndex) { listState.animateScrollToItem(selectedIndex) }
+    LazyRow(
+        state = listState,
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        itemsIndexed(names) { index, name ->
+            val selected = index == selectedIndex
+            Box(
+                modifier = Modifier
+                    .clickable { onSelect(index) }
+                    .background(
+                        color = if (selected) ToneXGreen else ToneXSurfaceHigh,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = name.uppercase(),
+                    style = MonoLabelStyle.copy(fontSize = 12.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) Color(0xFF111111) else ToneXOnSurfaceMuted
+                )
+            }
+        }
     }
 }

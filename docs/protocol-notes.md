@@ -284,3 +284,98 @@ B9 03 81 09 03 | 0A 02 | B9 04 02 00 | 15 | 88 | 33 33 03 41
 3. Achar o offset REAL do slot ativo no 0x0306 (no footswitch o byte em BC+8 ficou 00 —
    o offset assumido via `STATE_FIELDS_OFFSET=22` provavelmente esta errado).
 4. Decodificar o campo de versao de firmware (spec IK ou comparar com o app oficial).
+
+## Ajustes globais e volume master — implementado e VALIDADO EM BANCADA (2026-10-17)
+
+Fonte dos offsets: firmware de referencia Builty (`usb_tonex_one.c`,
+`usb_tonex_one_modify_global`, commit `9fd1156`). Conferidos byte a byte contra o estado REAL
+do pedal (`captures/tonex-session-1782929439644.jsonl`, `hello_response`) e depois escritos no
+pedal fisico (Galaxy S23, Android 16, ToneX One SN 200660). Implementado em
+`protocol/TonexGlobals.kt`.
+
+### Campos globais no StateData (corpo do 0x0306, sem o header de 8 B)
+
+| Ajuste | Posicao | Formato | Faixa | Valor na captura real |
+|---|---|---|---|---|
+| Trim de entrada | `[14]` tag `0x88`, `[15..18]` | float LE | −15..+15 dB | +4,0 |
+| Modo stomp | `[19]` | byte | 0 = A/B, 1 = stomp | 0 |
+| Cab sim bypass | `[20]` | byte | 0/1 | 0 |
+| Saida com afinador ligado | `[21]` | byte | 0 = mudo, 1 = thru | 1 |
+| Preset no slot A/B/C | `[len-18]` / `[len-16]` / `[len-14]` | u16 LE | 0..19 | 11 / 9 / 3 |
+| Bypass | `[len-12]` | byte | 0/1 | 0 |
+| Slot ativo | `[len-11]` | byte | 0/1/2 | 1 |
+| Referencia A4 | `[len-10]` tag `0x81`, `[len-9..len-8]` | u16 LE | 415..465 Hz | 440 |
+| Direct monitor | `[len-7]` | byte | sempre regravado como 1 | 1 |
+| Fonte do tempo | `[len-6]` | byte | 0 = global, 1 = preset | 0 |
+| BPM global | `[len-5]` tag `0x88`, `[len-4..len-1]` | float LE | 40..240 | 166,4 |
+
+Todos os campos tem tamanho fixo: escrever no lugar nao desloca os offsets contados do fim.
+`TonexGlobals.write` confere o byte de tag antes de escrever e recusa um estado com layout
+diferente, para nao reenviar lixo ao pedal.
+
+### Como escrever
+
+O mesmo mecanismo da troca de slot: pegar o ultimo estado recebido, mudar os bytes do campo e
+reenviar com o header de COMANDO (`B9 03 81 06 03 82 <len LE> 80 0B 03` + corpo). O TUSB
+regrava junto o slot ativo e o bypass que o app conhece (`UsbPedalConnection.writeGlobalState`):
+a troca de slot e otimista e o `rawState` local pode estar atrasado; reenviar o byte velho
+voltaria o pedal de slot. O Builty faz o mesmo ("reativa o preset atual, o que envia o estado").
+
+### Volume master (comando proprio, fora do StateData)
+
+```
+escrita (host -> pedal): B9 03 81 09 03 82 0A 00 80 0B 03 | B9 04 03 00 00 88 <f32 LE>   (0..10)
+pedido  (host -> pedal): B9 03 81 0D 03 82 05 00 80 0B 03 B9 03 03 00 00
+resposta (pedal -> host): B9 03 81 09 03 0A 02 B9 04 03 00 00 88 <f32 LE>
+```
+
+Mesmo envelope do parametro unico 0x0309, com subtipo `03` (parametros de preset usam `02`).
+O pedido e a resposta aparecem no trafego do app oficial com este pedal
+(`tonex_full_session.pcap` e `tonex_isolated_switch.pcap`: resposta `00 00 00 41` = 8,0). O
+`0x030D` e o "comando novo" da rotina fixa de conexao descrita acima.
+
+Licao da bancada: o pedido feito logo apos o handshake caiu (o 1o comando apos abrir a porta
+costuma cair, ver Bug 3). O repositorio repete o pedido nos polls ate a resposta chegar, no
+maximo 10 vezes por conexao.
+
+### Resultado da bancada (capturas JSONL do proprio TUSB)
+
+Cada escrita foi seguida, em menos de 1 s, por um 0x0306 do pedal com o valor novo, e os demais
+campos inalterados. Todos os ajustes voltaram ao valor original no fim.
+
+| Ajuste | Ida e volta confirmada pelo pedal |
+|---|---|
+| Referencia A4 | 440 → 441 → 440 Hz |
+| Saida com afinador | thru → mudo → thru |
+| BPM global | 240 → 239 → 240 |
+| Fonte do tempo | global → preset → global |
+| Trim de entrada | +4,0 → +5,0 → +4,0 dB |
+| Volume master | 8,0 → 8,6 (lido do pedal apos reconectar) → 8,0 |
+
+### O que o ToneX One NAO tem (para nao procurar de novo)
+
+- **Salvar preset no pedal:** nao existe comando. O ToneX One salva sozinho cada edicao feita via
+  0x0309 (Builty: "Tonex One uses auto save, nothing needed").
+- **Ligar o afinador via USB:** o comando `B9 03 81 0F 03 82 03 00 80 19 03 B9 01 <0|1>` so
+  funciona no ToneX One Plus (Builty: "doesn't work on the One, only on One Plus"). O afinador do
+  pedal e ligado no proprio pedal; o TUSB grava a referencia A4 e a saida mudo/thru.
+- **Brilho do LED:** o painel oficial `SettingsContent.xml` que tem esse ajuste e o do TONEX Plug
+  (`PlugDevice.png`, titulo "TONEX Plug"); `SettingsIK222/*` e do ToneX One Plus. Nenhum byte do
+  estado do ToneX One sobra para isso.
+- **Tabelas de mensagens do app oficial Android (`libjuce_jni.so`):** as de IK202/IK222 nao batem
+  com os IDs deste pedal (0x0306, 0x0304, 0x0309, 0x0300). Nao portar.
+
+### Indices de Reverb/Mod/Delay — prova com presets reais
+
+Os XMLs do app oficial numeram os `Param_N` de Reverb, Mod e Delay um abaixo dos indices do TUSB.
+O bloco de parametros dos 0x0304 reais do pedal (`tonex_diag.txt`,
+`captures/device/tonex-session-1783121993586.jsonl`) decide: com os indices do TUSB/Builty, os
+flags POST ficam em `[36]`, `[63]`, `[94]` e valem 0/1, e o ENABLE do delay (`[95]`) liga so no
+preset com delay. Com o deslocamento, esses flags cairiam em `[35] = 5`, `[62] = 30` e `[93] = 5`,
+impossivel para um liga/desliga. Os indices do TUSB (REVERB_MODEL 38, MODULATION_MODEL 65,
+DELAY_MODEL 96) estao corretos; a numeracao dos XMLs e interna do app oficial.
+
+Ordem dos modelos (`EffectModels.kt`, conferida no binario oficial e no Builty): Reverb = Spring
+1–4, Room, Plate; Modulacao = Chorus, Tremolo, Phaser, Flanger, Rotary; Delay = Digital, Tape.
+O seletor de modelo do editor escreve esses indices via 0x0309; a troca de modelo ainda nao foi
+exercitada em bancada.
