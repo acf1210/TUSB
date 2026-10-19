@@ -83,6 +83,22 @@ class PresetFilterTest {
     }
 
     @Test
+    fun searchMatchesToneModelName() {
+        val models = mapOf(1 to "Plexi Lead 100", 2 to "Clean Twin")
+        val found = presets.applyPresetFilter(PresetFilter(), tags, "plexi", models).map { it.index }
+        assertEquals(listOf(1), found)
+    }
+
+    @Test
+    fun displayNameIsNicknameThenToneModelThenGeneric() {
+        val models = mapOf(0 to "Plexi Lead 100", 1 to "Clean Twin")
+        val renamed = mapOf(1 to PresetCustomization(name = "Solo"))
+        assertEquals("Plexi Lead 100", presetDisplayName(presets[0], renamed[0], models))
+        assertEquals("Solo", presetDisplayName(presets[1], renamed[1], models))
+        assertEquals(presets[2].name, presetDisplayName(presets[2], null, models))
+    }
+
+    @Test
     fun nameSortIgnoresCaseAndUsesNickname() {
         val renamed = tags + (3 to PresetCustomization(name = "zzz last"))
         val sorted = presets.applyPresetFilter(PresetFilter(sort = PresetSort.NAME), renamed, "")

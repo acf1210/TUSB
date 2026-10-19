@@ -4,8 +4,11 @@ import com.opentonex.controller.library.ToneModelEntry
 import com.opentonex.controller.library.ToneModelLibrary
 import com.opentonex.controller.protocol.TonexFullPreset
 import com.opentonex.controller.repository.PedalRepository
+import com.opentonex.controller.repository.ConnectionState
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,9 +43,48 @@ class ToneModelLibraryController(
     private val _state = MutableStateFlow(ToneModelLibraryUiState())
     val state: StateFlow<ToneModelLibraryUiState> = _state.asStateFlow()
 
+    private val _pedalToneModels = MutableStateFlow<Map<Int, String>>(emptyMap())
+    /** Nome do Tone Model de cada preset salvo no pedal (indice -> nome), lido em segundo plano. */
+    val pedalToneModels: StateFlow<Map<Int, String>> = _pedalToneModels.asStateFlow()
+    private var scanJob: Job? = null
+
     fun attach(library: ToneModelLibrary) {
         this.library = library
         scope.launch { reload() }
+    }
+
+    /**
+     * Le, um preset por vez, o Tone Model dos presets salvos no pedal. Cada leitura pega o
+     * mutex do repositorio sozinha, entao trocas de preset e knobs nao esperam a varredura.
+     */
+    fun scanPedal() {
+        val repo = repository() ?: return
+        scanJob?.cancel()
+        _pedalToneModels.value = emptyMap()
+        scanJob = scope.launch {
+            for (index in 0 until TonexFullPreset.STORED_PRESET_COUNT) {
+                if (repository() !== repo || repo.state.value !is ConnectionState.Connected) return@launch
+                val preset = try {
+                    repo.readFullPreset(TonexFullPreset.BANK_STORED, index)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.w("TUSBToneModels", "leitura do preset $index falhou", e)
+                    continue
+                }
+                rememberToneModel(index, preset.toneModelName)
+            }
+        }
+    }
+
+    fun stopScan() {
+        scanJob?.cancel()
+        scanJob = null
+        _pedalToneModels.value = emptyMap()
+    }
+
+    private fun rememberToneModel(index: Int, name: String) {
+        _pedalToneModels.value = _pedalToneModels.value + (index to name)
     }
 
     fun clearMessage() {
@@ -58,7 +100,9 @@ class ToneModelLibraryController(
                 val preset = if (index == null) {
                     repo.readFullPreset(TonexFullPreset.BANK_EDIT_BUFFER, 0)
                 } else {
-                    repo.readFullPreset(TonexFullPreset.BANK_STORED, index)
+                    repo.readFullPreset(TonexFullPreset.BANK_STORED, index).also {
+                        rememberToneModel(index, it.toneModelName)
+                    }
                 }
                 val entry = withContext(Dispatchers.IO) { lib.save(preset) }
                 reload()
@@ -79,6 +123,7 @@ class ToneModelLibraryController(
                 val confirmed = repo.writeFullPreset(entry.preset.body, targetIndex)
                 reload()
                 if (confirmed) {
+                    rememberToneModel(targetIndex, entry.preset.toneModelName)
                     ToneModelMessage.Written(entry.preset.presetName, targetIndex, backupName)
                 } else {
                     ToneModelMessage.WriteNotConfirmed(targetIndex, backupName)

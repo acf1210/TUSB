@@ -77,21 +77,23 @@ private inline fun <reified T : Enum<T>> enumSet(csv: String): Set<T> =
 fun <T> Set<T>.toggled(item: T): Set<T> = if (item in this) this - item else this + item
 
 /**
- * Aplica busca, filtros e ordenacao. A busca casa o apelido local e o nome original; a
- * ordenacao e' estavel (empates caem na ordem numerica do preset).
+ * Aplica busca, filtros e ordenacao. A busca casa o apelido local, o nome original e o
+ * nome do Tone Model; a ordenacao e' estavel (empates caem na ordem numerica do preset).
  */
 fun List<LibraryPreset>.applyPresetFilter(
     criteria: PresetFilter,
     customizations: Map<Int, PresetCustomization>,
-    query: String
+    query: String,
+    toneModelNames: Map<Int, String> = emptyMap()
 ): List<LibraryPreset> {
-    fun displayName(preset: LibraryPreset) = customizations[preset.index]?.name ?: preset.name
+    fun displayName(preset: LibraryPreset) = presetDisplayName(preset, customizations[preset.index], toneModelNames)
 
     val visible = this.filter { preset ->
         criteria.matches(customizations[preset.index]) &&
             (query.isBlank() ||
                 displayName(preset).contains(query, ignoreCase = true) ||
-                preset.name.contains(query, ignoreCase = true))
+                preset.name.contains(query, ignoreCase = true) ||
+                toneModelNames[preset.index]?.contains(query, ignoreCase = true) == true)
     }
     return when (criteria.sort) {
         PresetSort.NUMBER -> visible.sortedBy { it.index }

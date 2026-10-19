@@ -340,6 +340,8 @@ private fun ConnectedNavHost(
     }
     val activePresetId = pedal.presetIds.getOrNull(pedal.activeSlot.ordinal)
     val activeCustom = activePresetId?.let { customizations[it] }
+    // Tone Model de cada preset salvo, lido do pedal em segundo plano apos conectar.
+    val toneModelNames = toneModels?.pedalToneModels?.collectAsStateWithLifecycle()?.value.orEmpty()
 
     NavHost(
         navController = navController,
@@ -349,14 +351,17 @@ private fun ConnectedNavHost(
         composable(TopLevelDestination.EDITOR.route) {
             EditorScreen(
                 activeSlot = pedal.activeSlot,
-                activePreset = pedal.slots.getOrNull(pedal.activeSlot.ordinal),
+                activePreset = pedal.slots.getOrNull(pedal.activeSlot.ordinal)?.let { slot ->
+                    val title = activeCustom?.name ?: activePresetId?.let(toneModelNames::get)?.takeIf(String::isNotBlank)
+                    if (title != null) slot.copy(name = title) else slot
+                },
                 bypassMode = pedal.bypassMode,
                 cabSimBypass = pedal.cabSimBypass,
                 ampKnobs = ampKnobs,
                 busyReason = busyState.busyReason,
                 effectChain = effectChain,
                 rigModels = pedal.rigModels(),
-                ampNameOverride = activeCustom?.ampName,
+                ampNameOverride = activeCustom?.ampName ?: activePresetId?.let(toneModelNames::get),
                 cabNameOverride = activeCustom?.cabName,
                 onAmpKnobChange = onAmpKnobChange,
                 onSelectEffect = { effect -> navController.navigate("effect/${effect.name}") },
@@ -392,6 +397,8 @@ private fun ConnectedNavHost(
                 },
                 activeAmpEnabled = pedal.rigModels().ampEnabled,
                 customizations = customizations,
+                toneModelNames = toneModelNames,
+                slotPresetIds = Slot.entries.map { pedal.presetIds.getOrNull(it.ordinal) },
                 onSaveCustomization = { index, customization ->
                     customizationStore.save(index, customization)
                     customizations = customizationStore.loadAll()

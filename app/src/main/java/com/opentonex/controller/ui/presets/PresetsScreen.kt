@@ -96,6 +96,10 @@ fun PresetsScreen(
     activeAmpEnabled: Boolean? = null,
     /** Apelidos e nomes manuais de amp/cab por preset (persistidos localmente). */
     customizations: Map<Int, PresetCustomization> = emptyMap(),
+    /** Nome do Tone Model de cada preset salvo (indice -> nome), lido do pedal. */
+    toneModelNames: Map<Int, String> = emptyMap(),
+    /** ID do preset carregado em cada slot A/B/C (null se desconhecido). */
+    slotPresetIds: List<Int?> = emptyList(),
     onSaveCustomization: ((Int, PresetCustomization) -> Unit)? = null,
     onSelectSlot: (Slot) -> Unit,
     onLoadPreset: (Int) -> Unit,
@@ -110,11 +114,11 @@ fun PresetsScreen(
     var showFilters by remember { mutableStateOf(false) }
     // Sobrevive a troca de aba/rotacao; o filtro e' so' da exibicao local.
     var filter by rememberSaveable(stateSaver = PresetFilterSaver) { mutableStateOf(PresetFilter()) }
-    val visiblePresets = remember(libraryPresets, searchQuery, customizations, filter) {
+    val visiblePresets = remember(libraryPresets, searchQuery, customizations, toneModelNames, filter) {
         val source = libraryPresets.ifEmpty {
             (0 until 20).map { index -> LibraryPreset(index = index, name = "Preset ${index + 1}", color = fallbackPresetColor(index)) }
         }
-        source.applyPresetFilter(filter, customizations, searchQuery)
+        source.applyPresetFilter(filter, customizations, searchQuery, toneModelNames)
     }
 
     Box(
@@ -139,6 +143,9 @@ fun PresetsScreen(
             pedalMode = pedalMode,
             bypassMode = bypassMode,
             presets = presets,
+            slotNames = slotPresetIds.map { id ->
+                id?.let { customizations[it]?.name ?: toneModelNames[it]?.takeIf(String::isNotBlank) }
+            },
             isBusy = isBusy,
             onSelectSlot = onSelectSlot,
             onToggleBypass = onToggleBypass
@@ -181,7 +188,10 @@ fun PresetsScreen(
                 val custom = customizations[preset.index]
                 PresetListRow(
                     number = preset.index + 1,
-                    name = custom?.name ?: preset.name,
+                    // O pedal nao informa o nome do preset no estado ("Preset 01" e' local):
+                    // o Tone Model aplicado vira o nome; com apelido, ele aparece abaixo.
+                    name = presetDisplayName(preset, custom, toneModelNames),
+                    toneModel = toneModelNames[preset.index]?.takeIf { it.isNotBlank() && custom?.name != null },
                     accent = preset.color.toColor(),
                     slotBadge = slotBadge,
                     isActive = isActive,
@@ -227,6 +237,13 @@ fun PresetsScreen(
         )
     }
 }
+
+/** Nome exibido do preset: apelido local, senao o Tone Model lido do pedal, senao o generico. */
+internal fun presetDisplayName(
+    preset: LibraryPreset,
+    custom: PresetCustomization?,
+    toneModelNames: Map<Int, String>
+): String = custom?.name ?: toneModelNames[preset.index]?.takeIf { it.isNotBlank() } ?: preset.name
 
 /** Linha de rig com nomes manuais ("AMP JCM800 · CAB Brit 4x12"); null se nada informado. */
 private fun manualRigLine(custom: PresetCustomization?): String? {
@@ -291,6 +308,7 @@ private fun SearchField(query: String, onQueryChange: (String) -> Unit, modifier
 private fun PresetListRow(
     number: Int,
     name: String,
+    toneModel: String? = null,
     accent: Color,
     slotBadge: Slot?,
     isActive: Boolean,
@@ -353,6 +371,15 @@ private fun PresetListRow(
                         SlotBadge(slot = slotBadge)
                     }
                 }
+                if (toneModel != null) {
+                    Text(
+                        text = toneModel,
+                        fontSize = 12.sp,
+                        color = ToneXAccent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 if (rigLine != null) {
                     Text(
                         text = rigLine,
@@ -368,8 +395,8 @@ private fun PresetListRow(
 
 /**
  * Dialogo de personalizacao do preset (toque longo na linha): apelido + nomes manuais
- * de amp e cab. Os dados ficam SO no aparelho — o protocolo USB nao permite renomear
- * presets nem le os nomes dos captures.
+ * de amp e cab. Os dados ficam SO no aparelho; o nome do Tone Model lido do pedal
+ * aparece na lista de qualquer forma.
  */
 @Composable
 private fun PresetEditDialog(
@@ -508,6 +535,7 @@ private fun FootswitchDeck(
     pedalMode: PedalMode,
     bypassMode: Boolean,
     presets: List<PresetSlot>,
+    slotNames: List<String?>,
     isBusy: Boolean,
     onSelectSlot: (Slot) -> Unit,
     onToggleBypass: () -> Unit
@@ -522,6 +550,7 @@ private fun FootswitchDeck(
             FootswitchButton(
                 slot = slot,
                 preset = preset,
+                name = slotNames.getOrNull(slot.ordinal),
                 isActive = slot == activeSlot,
                 enabled = !isBusy,
                 modifier = Modifier.weight(1f),
@@ -535,7 +564,7 @@ private fun FootswitchDeck(
 }
 
 @Composable
-private fun FootswitchButton(slot: Slot, preset: PresetSlot?, isActive: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun FootswitchButton(slot: Slot, preset: PresetSlot?, name: String?, isActive: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val color = preset?.color?.toColor() ?: slotColor(slot)
     Column(
         modifier = modifier
@@ -554,7 +583,7 @@ private fun FootswitchButton(slot: Slot, preset: PresetSlot?, isActive: Boolean,
         Text(text = slot.name, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
         Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(color))
         Text(
-            text = preset?.name ?: "Preset ${slot.name}",
+            text = name ?: preset?.name ?: "Preset ${slot.name}",
             fontSize = 10.sp,
             color = ToneXOnSurfaceMuted,
             maxLines = 1,

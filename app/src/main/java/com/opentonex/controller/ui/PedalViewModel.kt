@@ -451,6 +451,7 @@ class PedalViewModel : ViewModel() {
                 _error.value = null
                 repo.connect()
                 publishRepositoryState(repo.state.value)
+                toneModels.scanPedal()
             } catch (e: Exception) {
                 _error.value = e.message ?: localText("Falha ao conectar ao pedal", "Failed to connect to pedal", "No se pudo conectar al pedal")
                 detachRepository(repo)
@@ -481,6 +482,7 @@ class PedalViewModel : ViewModel() {
                 attachRepository(repo)
                 repo.connect()
                 publishRepositoryState(repo.state.value)
+                toneModels.scanPedal()
                 startStatePolling(repo)
             } catch (e: Exception) {
                 _error.value = e.message ?: localText("Falha ao conectar ao pedal", "Failed to connect to pedal", "No se pudo conectar al pedal")
@@ -718,6 +720,7 @@ class PedalViewModel : ViewModel() {
 
     private fun detachRepository(repo: PedalRepository) {
         if (repository === repo) repository = null
+        toneModels.stopScan()
         statePollingJob?.cancel()
         statePollingJob = null
         parameterChangesJob?.cancel()
