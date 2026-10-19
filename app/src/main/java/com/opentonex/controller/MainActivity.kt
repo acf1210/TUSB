@@ -18,6 +18,7 @@ import com.opentonex.controller.midi.PedalMidiActionHandler
 import com.opentonex.controller.ui.PedalViewModel
 import com.opentonex.controller.ui.ToneXApp
 import com.opentonex.controller.ui.theme.ToneXTheme
+import com.opentonex.controller.update.UpdateViewModel
 import com.opentonex.controller.usb.UsbSerialTransport
 
 class MainActivity : ComponentActivity() {
@@ -25,6 +26,8 @@ class MainActivity : ComponentActivity() {
     // (criado aqui) e a UI (viewModel() no Compose) enxerguem o mesmo estado do pedal.
     private val pedalViewModel: PedalViewModel by viewModels()
     private var midiController: MidiController? = null
+    // Mesma instancia que activityUpdateViewModel() usa no Compose (dialogo e Menu).
+    private val updateViewModel: UpdateViewModel by viewModels()
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +38,7 @@ class MainActivity : ComponentActivity() {
         )
         midiController = midi
         pedalViewModel.toneModels.attach(ToneModelLibrary(File(filesDir, "tone-models")))
+        updateViewModel.checkIfDue()
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
             val menuState = pedalViewModel.menu.collectAsStateWithLifecycle()

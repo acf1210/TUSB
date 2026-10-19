@@ -194,4 +194,17 @@
     <string name="tone_models_written">“%1$s” grabado en el preset %2$d y confirmado. Copia: %3$s.</string>
     <string name="tone_models_write_unconfirmed">El pedal no confirmó el preset %1$d. Copia guardada como %2$s.</string>
     <string name="tone_models_failed">Falló: %1$s</string>
+    <string name="update_title">TUSB %1$s disponible</string>
+    <string name="update_installed">Versión instalada: %1$s</string>
+    <string name="update_install_hint">El APK se abre en el navegador. Cuando termine la descarga, ábrelo para actualizar; tus ajustes y la biblioteca se conservan.</string>
+    <string name="update_download">Descargar</string>
+    <string name="update_later">Más tarde</string>
+    <string name="update_skip">Omitir esta versión</string>
+    <string name="update_section">Actualizaciones de la app</string>
+    <string name="update_auto">Buscar actualizaciones automáticamente</string>
+    <string name="update_check_now">Buscar ahora</string>
+    <string name="update_checking">Buscando…</string>
+    <string name="update_up_to_date">Ya tienes la versión más reciente.</string>
+    <string name="update_available">La versión %1$s está disponible.</string>
+    <string name="update_failed">No se pudo verificar: %1$s</string>
 </resources>

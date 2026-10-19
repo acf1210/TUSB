@@ -7,6 +7,7 @@ activityCompose = "1.9.2"
 coreKtx = "1.13.1"
 junit = "4.13.2"
 turbine = "1.1.0"
+orgJson = "20240303"
 usbSerial = "3.10.0"
 navigationCompose = "2.8.0"
 lifecycleCompose = "2.8.4"
@@ -21,6 +22,7 @@ coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", ve
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 junit = { module = "junit:junit", version.ref = "junit" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
+org-json = { module = "org.json:json", version.ref = "orgJson" }
 usb-serial-android = { module = "com.github.mik3y:usb-serial-for-android", version.ref = "usbSerial" }
 navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleCompose" }

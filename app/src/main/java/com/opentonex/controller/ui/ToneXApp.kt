@@ -50,6 +50,9 @@ import androidx.compose.ui.unit.sp
 import com.opentonex.controller.protocol.GlobalSetting
 import com.opentonex.controller.ui.library.ToneModelLibraryController
 import com.opentonex.controller.ui.library.ToneModelLibraryScreen
+import com.opentonex.controller.ui.update.UpdateDialog
+import com.opentonex.controller.ui.update.UpdateSettingsCard
+import com.opentonex.controller.ui.update.activityUpdateViewModel
 import com.opentonex.controller.ui.theme.ToneXOnSurface
 import com.opentonex.controller.ui.theme.ToneXOnSurfaceMuted
 import androidx.annotation.StringRes
@@ -152,6 +155,16 @@ fun ToneXApp(
     val ampKnobs by viewModel.ampKnobs.collectAsStateWithLifecycle()
     val effectChain by viewModel.effectChain.collectAsStateWithLifecycle()
     val menuState by viewModel.menu.collectAsStateWithLifecycle()
+    val updateViewModel = activityUpdateViewModel()
+    val updateState by updateViewModel.state.collectAsStateWithLifecycle()
+    updateState.pending?.let { update ->
+        UpdateDialog(
+            update = update,
+            currentVersion = updateState.currentVersion,
+            onLater = updateViewModel::postpone,
+            onSkip = { updateViewModel.skip(update) }
+        )
+    }
 
     // Captura de log NAO inicia automaticamente: fica parada por padrao e so'
     // e' ligada manualmente pelo usuario na aba Menu.
@@ -423,7 +436,12 @@ private fun ConnectedNavHost(
                 onStartCapture = onStartCapture,
                 onStopCapture = onStopCapture,
                 onDisconnect = onDisconnect,
-                midiController = midiController
+                midiController = midiController,
+                updateSettings = {
+                    val updates = activityUpdateViewModel()
+                    val state by updates.state.collectAsStateWithLifecycle()
+                    UpdateSettingsCard(state = state, onCheckNow = updates::checkNow, onAutoCheckChange = updates::setAutoCheck)
+                }
             )
         }
     }

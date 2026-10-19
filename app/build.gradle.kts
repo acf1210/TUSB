@@ -44,4 +44,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.turbine)
+    // org.json do Android e so stub na JVM; a implementacao real roda os testes do parser.
+    testImplementation(libs.org.json)
 }

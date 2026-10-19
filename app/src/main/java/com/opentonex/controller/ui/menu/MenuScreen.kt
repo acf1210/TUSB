@@ -58,6 +58,8 @@ fun MenuScreen(
     onStopCapture: () -> Unit,
     onDisconnect: () -> Unit,
     midiController: MidiController? = null,
+    /** Cartao de atualizacoes do app, exibido na aba Geral. */
+    updateSettings: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -101,6 +103,7 @@ fun MenuScreen(
                 MenuTab.GENERAL -> {
                     TempoSettings(pedal = pedal, onGlobalSettingChange = onGlobalSettingChange)
                     GeneralTab(theme = theme, onThemeChange = onThemeChange)
+                    updateSettings?.invoke()
                 }
             }
         }
