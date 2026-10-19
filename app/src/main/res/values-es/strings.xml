@@ -171,4 +171,27 @@
     <string name="character_drive">Drive</string>
     <string name="character_hi_gain">Hi-Gain</string>
     <string name="character_fuzzy">Fuzz</string>
+    <string name="cancel">Cancelar</string>
+    <string name="tone_models_title">Tone Models</string>
+    <string name="tone_models_open">Biblioteca de Tone Models</string>
+    <string name="tone_models_tab_library">En el dispositivo</string>
+    <string name="tone_models_tab_pedal">Del pedal</string>
+    <string name="tone_models_import">Importar archivo .tusbtone</string>
+    <string name="tone_models_export">Exportar</string>
+    <string name="tone_models_delete">Eliminar</string>
+    <string name="tone_models_delete_title">¿Eliminar de la biblioteca?</string>
+    <string name="tone_models_save">Guardar en el dispositivo</string>
+    <string name="tone_models_save_current">Guardar el preset que suena ahora</string>
+    <string name="tone_models_pedal_hint">Guarda el preset completo, con el Tone Model, en este dispositivo. Para traer un Tone Model de ToneNET, cárgalo en el pedal con la app oficial y luego guárdalo aquí.</string>
+    <string name="tone_models_empty">Todavía no hay Tone Models guardados. Abre “Del pedal” para guardar uno, o importa un archivo .tusbtone.</string>
+    <string name="tone_models_write">Grabar en el pedal</string>
+    <string name="tone_models_write_title">Grabar “%1$s” en el pedal</string>
+    <string name="tone_models_write_warning">Elige el preset que se reemplazará. TUSB guarda antes una copia en la biblioteca y verifica el resultado releyendo el pedal.</string>
+    <string name="tone_models_reading">Leyendo el preset del pedal…</string>
+    <string name="tone_models_writing">Grabando en el pedal…</string>
+    <string name="tone_models_saved">“%1$s” guardado en la biblioteca.</string>
+    <string name="tone_models_imported">“%1$s” importado.</string>
+    <string name="tone_models_written">“%1$s” grabado en el preset %2$d y confirmado. Copia: %3$s.</string>
+    <string name="tone_models_write_unconfirmed">El pedal no confirmó el preset %1$d. Copia guardada como %2$s.</string>
+    <string name="tone_models_failed">Falló: %1$s</string>
 </resources>

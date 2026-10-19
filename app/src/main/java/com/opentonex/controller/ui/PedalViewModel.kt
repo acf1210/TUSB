@@ -16,6 +16,7 @@ import com.opentonex.controller.protocol.TonexGlobals
 import com.opentonex.controller.repository.ConnectionState
 import com.opentonex.controller.repository.PedalRepository
 import com.opentonex.controller.ui.editor.EffectSlotType
+import com.opentonex.controller.ui.library.ToneModelLibraryController
 import com.opentonex.controller.ui.theme.TusbTheme
 import java.io.File
 import java.util.Locale
@@ -385,6 +386,24 @@ class PedalViewModel : ViewModel() {
 
     private val _menu = MutableStateFlow(MenuUiState())
     val menu: StateFlow<MenuUiState> = _menu.asStateFlow()
+
+    /** Biblioteca de presets completos (com Tone Model) lidos do pedal. */
+    val toneModels = ToneModelLibraryController(
+        scope = viewModelScope,
+        repository = { repository },
+        runBusy = { reason, block ->
+            if (!_busy.value.isBusy) {
+                viewModelScope.launch {
+                    try {
+                        setBusy(reason)
+                        block()
+                    } finally {
+                        clearBusy()
+                    }
+                }
+            }
+        }
+    )
 
     fun updateMasterVolume(value: Float) {
         val repo = repository ?: return

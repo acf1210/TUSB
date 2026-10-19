@@ -379,3 +379,34 @@ Ordem dos modelos (`EffectModels.kt`, conferida no binario oficial e no Builty):
 1–4, Room, Plate; Modulacao = Chorus, Tremolo, Phaser, Flanger, Rotary; Delay = Digital, Tape.
 O seletor de modelo do editor escreve esses indices via 0x0309; a troca de modelo ainda nao foi
 exercitada em bancada.
+
+## Preset completo com Tone Model (0x0303) — leitura e gravacao validadas (2026-10-19)
+
+O app oficial pede, ao conectar, os 20 presets em duas fases com o mesmo comando 0x0300
+(`tonex_full_session.pcap`). A fase `00` devolve o 0x0304 (metadados, 2216 B) e a fase `01`
+devolve o **0x0303 (~30 KB): o preset inteiro, incluindo o Tone Model**.
+
+```
+PEDIDO   (host→pedal): B9 03 81 00 03 82 06 00 80 0B 03 | B9 04 0B <banco> <indice> <fase>
+RESPOSTA (pedal→host): B9 03 81 03 03 81 <len16 LE> 0B   | corpo (30356 B)
+GRAVACAO (host→pedal): B9 03 81 03 03 82 <len16 LE> 80 0B 03 | mesmo corpo, banco=01, indice=destino
+```
+
+- Banco `01` = presets salvos 0..19; banco `00` = preset em edicao (o corpo traz o indice ativo).
+- Tags do corpo: `B9 n` struct, `BA n` array, `BC n` bytes, `88` float, `80 x` u8, `81 lo hi` u16.
+  O parser do TUSB (`TonexFullPreset`) exige que a arvore consuma o corpo inteiro.
+- Layout: `struct[3]{banco, indice, struct[4]{cabecalho, tone model 1, 0, tone model 2}}`.
+  Cabecalho = nome (33 B) + 2 floats + 3×109 parametros + 13 campos de metadados. Tone model =
+  id (16 B), nome (33 B), tipo, **blob do modelo (13768 B)** e 9 metadados (3 = id curto do amp,
+  5 = data, 6 = autor, ex. "IK Multimedia"). Conferido nos 21 frames da captura.
+- A gravacao segue o mesmo padrao do 0x0306/0x0309 (sufixo de comando no lugar do header de
+  resposta). Bancada: preset 1 ("Fender 57 clean") copiado para o 20 e o original ("OCD 13")
+  restaurado do backup; nas duas vezes a releitura do 0x0303 devolveu exatamente o corpo gravado.
+  O pedal grava sozinho (auto-save), sem comando de salvar.
+
+### Arquivos `.txp` do ToneNET/app oficial
+
+Sao `<tamanho>.<base64 do JUCE>` e, decodificados, **criptografados** (blocos de 8 B repetidos =
+cifra de bloco em modo ECB, provavelmente BlowFish do JUCE, chave dentro do app oficial). O TUSB
+nao decifra esses arquivos: o caminho suportado e carregar o Tone Model no pedal pelo app oficial e
+salvar o preset no TUSB, que guarda o 0x0303 aberto em arquivos `.tusbtone`.

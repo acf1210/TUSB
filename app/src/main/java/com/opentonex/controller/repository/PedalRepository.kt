@@ -9,11 +9,14 @@ import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.domain.Slot
 import com.opentonex.controller.domain.TonexParam
+import com.opentonex.controller.protocol.FullPreset
 import com.opentonex.controller.protocol.GlobalSetting
+import com.opentonex.controller.protocol.TonexFullPreset
 import com.opentonex.controller.protocol.TonexMessages
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -175,6 +178,29 @@ class PedalRepository(
         _state.value = current.copy(pedal = current.pedal.withParameterValue(index, value))
     }
 
+    /**
+     * Le o preset completo (com o Tone Model) sob o mesmo mutex do poll: os ~30 KB do 0x0303
+     * nao podem ser disputados pela drenagem passiva de frames.
+     */
+    suspend fun readFullPreset(bank: Int, index: Int): FullPreset = operationMutex.withLock {
+        if (_state.value !is ConnectionState.Connected) throw IllegalStateException("pedal desconectado")
+        recordLocalAction("read_full_preset", mapOf("bank" to bank, "index" to index))
+        TonexFullPreset.parse(connection.readFullPreset(bank, index))
+    }
+
+    /**
+     * Grava [body] no preset salvo [targetIndex] e confirma relendo o preset.
+     * Retorna true quando o pedal devolveu exatamente o conteudo gravado.
+     */
+    suspend fun writeFullPreset(body: ByteArray, targetIndex: Int): Boolean = operationMutex.withLock {
+        if (_state.value !is ConnectionState.Connected) throw IllegalStateException("pedal desconectado")
+        recordLocalAction("write_full_preset", mapOf("index" to targetIndex, "size" to body.size))
+        connection.writeFullPreset(body, targetIndex)
+        delay(FULL_PRESET_SETTLE_MS) // o pedal grava na flash antes de responder a releitura
+        val readBack = connection.readFullPreset(TonexFullPreset.BANK_STORED, targetIndex)
+        TonexFullPreset.sameContent(body, readBack)
+    }
+
     suspend fun refreshState() {
         syncState(recordAction = true)
     }
@@ -307,5 +333,6 @@ class PedalRepository(
 
     private companion object {
         const val MASTER_VOLUME_REQUEST_ATTEMPTS = 10
+        const val FULL_PRESET_SETTLE_MS = 500L
     }
 }

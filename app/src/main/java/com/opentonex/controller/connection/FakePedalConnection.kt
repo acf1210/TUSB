@@ -8,6 +8,7 @@ import com.opentonex.controller.domain.PresetSlot
 import com.opentonex.controller.domain.Rgb
 import com.opentonex.controller.domain.Slot
 import com.opentonex.controller.domain.TonexParam
+import com.opentonex.controller.protocol.TonexFullPreset
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -133,6 +134,31 @@ class FakePedalConnection : PedalConnection {
     override suspend fun requestMasterVolume() {
         events.tryEmit(PedalRuntimeEvent.MasterVolumeChanged(value = masterVolume, payloadHex = ""))
     }
+
+    /** Presets completos simulados (0x0303) por indice salvo, com Tone Model sintetico. */
+    val fullPresets: MutableMap<Int, ByteArray> = (0 until 20).associateWith { index ->
+        SimulatedFullPreset.body(
+            bank = 1,
+            index = index,
+            presetName = "Preset ${index + 1}",
+            toneModelName = "Demo Amp ${index + 1}"
+        )
+    }.toMutableMap()
+
+    override suspend fun readFullPreset(bank: Int, index: Int): ByteArray {
+        val stored = fullPresets[index] ?: error("preset simulado inexistente: $index")
+        return stored.copyOf().also { body ->
+            body[2] = bank.toByte()
+            body[3] = (if (bank == 0) activeLibraryIndex() else index).toByte()
+        }
+    }
+
+    override suspend fun writeFullPreset(body: ByteArray, targetIndex: Int) {
+        val payload = TonexFullPreset.writePayload(body, targetIndex)
+        fullPresets[targetIndex] = payload.copyOfRange(payload.size - body.size, payload.size)
+    }
+
+    private fun activeLibraryIndex(): Int = state.presetIds.getOrNull(state.activeSlot.ordinal) ?: 0
 
     /** Ultimo valor escrito por indice de parametro (inspecionavel nos testes). */
     val parameters = mutableMapOf<Int, Float>()

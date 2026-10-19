@@ -5,6 +5,7 @@ import com.opentonex.controller.domain.PedalMode
 import com.opentonex.controller.domain.PedalState
 import com.opentonex.controller.protocol.HdlcCodec
 import com.opentonex.controller.protocol.HdlcFrame
+import com.opentonex.controller.protocol.TonexFullPreset
 import com.opentonex.controller.protocol.TonexGlobals
 import com.opentonex.controller.protocol.TonexMessages
 import kotlinx.coroutines.delay
@@ -253,6 +254,36 @@ class UsbPedalConnection(
         transport.write(HdlcCodec.encode(payload))
     }
 
+    override suspend fun readFullPreset(bank: Int, index: Int): ByteArray {
+        val request = TonexFullPreset.requestPayload(bank, index)
+        var lastError: Exception? = null
+        // O 1o comando apos um periodo ocioso costuma cair: tenta de novo antes de desistir.
+        repeat(FULL_PRESET_ATTEMPTS) {
+            try {
+                emitRequestEvent(requestKind = "read_full_preset", payload = request)
+                val response = roundTripExpecting(request, TonexFullPreset.FULL_PRESET_TYPE, FULL_PRESET_TIMEOUT_MS)
+                val body = TonexFullPreset.bodyFromResponse(response)
+                val parsed = TonexFullPreset.parse(body)
+                if (parsed.bank != bank || parsed.index != index) {
+                    throw PedalProtocolException("pedal devolveu o preset ${parsed.bank}/${parsed.index}, esperado $bank/$index")
+                }
+                return body
+            } catch (e: PedalTransportTimeoutException) {
+                lastError = e
+            } catch (e: PedalProtocolException) {
+                lastError = e
+            }
+        }
+        throw PedalProtocolException("pedal nao devolveu o preset completo $index", lastError)
+    }
+
+    override suspend fun writeFullPreset(body: ByteArray, targetIndex: Int) {
+        val payload = TonexFullPreset.writePayload(body, targetIndex)
+        android.util.Log.d("ToneXConn", "writeFullPreset target=$targetIndex (${payload.size}B)")
+        emitRequestEvent(requestKind = "write_full_preset", payload = payload.copyOfRange(0, 32))
+        transport.write(HdlcCodec.encode(payload))
+    }
+
     override suspend fun writeParameter(paramIndex: Int, value: Float) {
         val payload = TonexMessages.buildSetParameterPayload(paramIndex, value)
         val frame = HdlcCodec.encode(payload)
@@ -489,5 +520,8 @@ class UsbPedalConnection(
         private const val PASSIVE_DRAIN_MAX_FRAMES = 64
         private const val PASSIVE_DRAIN_NEXT_TIMEOUT_MS = 60L
         private const val PARAM_ECHO_SUPPRESS_MS = 1500L
+        /** O pedal leva ~150 ms para mandar os ~30 KB do 0x0303 (tonex_full_session.pcap). */
+        private const val FULL_PRESET_TIMEOUT_MS = 3000L
+        private const val FULL_PRESET_ATTEMPTS = 3
     }
 }

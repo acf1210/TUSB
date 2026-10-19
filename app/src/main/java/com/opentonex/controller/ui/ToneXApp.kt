@@ -48,6 +48,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.opentonex.controller.protocol.GlobalSetting
+import com.opentonex.controller.ui.library.ToneModelLibraryController
+import com.opentonex.controller.ui.library.ToneModelLibraryScreen
 import com.opentonex.controller.ui.theme.ToneXOnSurface
 import com.opentonex.controller.ui.theme.ToneXOnSurfaceMuted
 import androidx.annotation.StringRes
@@ -80,6 +82,8 @@ import com.opentonex.controller.ui.presets.PresetsScreen
 import com.opentonex.controller.ui.theme.TusbTheme
 import com.opentonex.controller.ui.tools.ToolsScreen
 import com.opentonex.controller.ui.tonenet.ToneNetScreen
+
+private const val TONE_MODELS_ROUTE = "tone_models"
 
 private enum class TopLevelDestination(val route: String, @StringRes val labelRes: Int) {
     EDITOR("editor", R.string.nav_editor),
@@ -194,7 +198,8 @@ fun ToneXApp(
                 onStartCapture = { viewModel.startCapture(onResolveCaptureDirectory()) },
                 onStopCapture = viewModel::stopCapture,
                 onDisconnect = viewModel::disconnect,
-                midiController = midiController
+                midiController = midiController,
+                toneModels = viewModel.toneModels
             )
             val currentError = errorMessage
             if (currentError != null) {
@@ -238,7 +243,8 @@ private fun ConnectedApp(
     onStartCapture: () -> Unit,
     onStopCapture: () -> Unit,
     onDisconnect: () -> Unit,
-    midiController: MidiController? = null
+    midiController: MidiController? = null,
+    toneModels: ToneModelLibraryController? = null
 ) {
     val navController = rememberNavController()
     val destinations = TopLevelDestination.entries
@@ -262,7 +268,7 @@ private fun ConnectedApp(
                     navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
                     onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onGlobalSettingChange,
                     onThemeChange, captureState, onRefreshState, onStartCapture, onStopCapture,
-                    onDisconnect, midiController, modifier = Modifier.fillMaxSize()
+                    onDisconnect, midiController, toneModels = toneModels, modifier = Modifier.fillMaxSize()
                 )
             }
         }
@@ -277,7 +283,7 @@ private fun ConnectedApp(
                 navController, firmwareVersion, pedal, busyState, ampKnobs, effectChain, menuState, onSelectSlot, onLoadPreset, onSwitchMode,
                 onToggleBypass, onToggleCabSimBypass, onAmpKnobChange, onToggleEffect, effectDetail, onEffectControl, onMasterVolumeChange, onGlobalSettingChange,
                 onThemeChange, captureState, onRefreshState, onStartCapture, onStopCapture,
-                onDisconnect, midiController, modifier = Modifier.fillMaxSize().padding(padding)
+                onDisconnect, midiController, toneModels = toneModels, modifier = Modifier.fillMaxSize().padding(padding)
             )
         }
     }
@@ -310,6 +316,7 @@ private fun ConnectedNavHost(
     onStopCapture: () -> Unit,
     onDisconnect: () -> Unit,
     midiController: MidiController? = null,
+    toneModels: ToneModelLibraryController? = null,
     modifier: Modifier = Modifier
 ) {
     // Apelidos e nomes manuais de amp/cab por preset (persistencia local ao aparelho).
@@ -379,8 +386,22 @@ private fun ConnectedNavHost(
                 onSelectSlot = onSelectSlot,
                 onLoadPreset = onLoadPreset,
                 onSwitchMode = onSwitchMode,
-                onToggleBypass = onToggleBypass
+                onToggleBypass = onToggleBypass,
+                onOpenToneModels = toneModels?.let { { navController.navigate(TONE_MODELS_ROUTE) } }
             )
+        }
+        if (toneModels != null) {
+            composable(TONE_MODELS_ROUTE) {
+                val libraryState by toneModels.state.collectAsStateWithLifecycle()
+                ToneModelLibraryScreen(
+                    state = libraryState,
+                    pedalPresets = pedal.libraryPresets,
+                    isBusy = busyState.isBusy,
+                    busyReason = busyState.busyReason,
+                    controller = toneModels,
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
         composable(TopLevelDestination.TOOLS.route) { ToolsScreen() }
         composable(TopLevelDestination.TONENET.route) { ToneNetScreen() }

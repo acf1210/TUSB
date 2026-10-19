@@ -12,6 +12,7 @@ import java.io.File
 import com.opentonex.controller.connection.FakePedalConnection
 import com.opentonex.controller.connection.PedalConnection
 import com.opentonex.controller.connection.UsbPedalConnection
+import com.opentonex.controller.library.ToneModelLibrary
 import com.opentonex.controller.midi.MidiController
 import com.opentonex.controller.midi.PedalMidiActionHandler
 import com.opentonex.controller.ui.PedalViewModel
@@ -33,6 +34,7 @@ class MainActivity : ComponentActivity() {
             handler = PedalMidiActionHandler(pedalViewModel)
         )
         midiController = midi
+        pedalViewModel.toneModels.attach(ToneModelLibrary(File(filesDir, "tone-models")))
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
             val menuState = pedalViewModel.menu.collectAsStateWithLifecycle()

@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -100,6 +101,8 @@ fun PresetsScreen(
     onLoadPreset: (Int) -> Unit,
     onSwitchMode: (PedalMode) -> Unit,
     onToggleBypass: () -> Unit,
+    /** Abre a biblioteca de Tone Models; null esconde o botao. */
+    onOpenToneModels: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -153,6 +156,7 @@ fun PresetsScreen(
                 modifier = Modifier.weight(1f)
             )
             PresetFilterButton(count = filter.activeCount, onClick = { showFilters = true })
+            if (onOpenToneModels != null) ToneModelsButton(onClick = onOpenToneModels)
         }
 
         // Lista de presets da biblioteca no estilo do design
@@ -601,3 +605,22 @@ private val PresetFilterSaver = Saver<PresetFilter, String>(
     save = { it.encode() },
     restore = { PresetFilter.decode(it) }
 )
+
+/** Atalho para a biblioteca de Tone Models, no mesmo formato do botao de filtros. */
+@Composable
+private fun ToneModelsButton(onClick: () -> Unit) {
+    Surface(
+        color = ToneXSurfaceVariant,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Box(modifier = Modifier.size(width = 44.dp, height = 40.dp), contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Filled.LibraryMusic,
+                contentDescription = stringResource(R.string.tone_models_open),
+                tint = ToneXOnSurfaceMuted,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}

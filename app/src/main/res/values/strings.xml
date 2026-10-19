@@ -173,4 +173,27 @@
     <string name="character_drive">Drive</string>
     <string name="character_hi_gain">Hi-Gain</string>
     <string name="character_fuzzy">Fuzzy</string>
+    <string name="cancel">Cancel</string>
+    <string name="tone_models_title">Tone Models</string>
+    <string name="tone_models_open">Tone Model library</string>
+    <string name="tone_models_tab_library">On this device</string>
+    <string name="tone_models_tab_pedal">From the pedal</string>
+    <string name="tone_models_import">Import .tusbtone file</string>
+    <string name="tone_models_export">Export</string>
+    <string name="tone_models_delete">Delete</string>
+    <string name="tone_models_delete_title">Delete from the library?</string>
+    <string name="tone_models_save">Save to device</string>
+    <string name="tone_models_save_current">Save the preset playing now</string>
+    <string name="tone_models_pedal_hint">Saves the full preset, Tone Model included, to this device. To bring a Tone Model from ToneNET, load it into the pedal with the official app first, then save it here.</string>
+    <string name="tone_models_empty">No Tone Models saved yet. Open “From the pedal” to save one, or import a .tusbtone file.</string>
+    <string name="tone_models_write">Write to pedal</string>
+    <string name="tone_models_write_title">Write “%1$s” to the pedal</string>
+    <string name="tone_models_write_warning">Choose the preset to replace. TUSB saves a backup of it to the library first, then checks the result by reading it back.</string>
+    <string name="tone_models_reading">Reading the preset from the pedal…</string>
+    <string name="tone_models_writing">Writing to the pedal…</string>
+    <string name="tone_models_saved">“%1$s” saved to the library.</string>
+    <string name="tone_models_imported">“%1$s” imported.</string>
+    <string name="tone_models_written">“%1$s” written to preset %2$d and confirmed. Backup: %3$s.</string>
+    <string name="tone_models_write_unconfirmed">The pedal did not confirm preset %1$d. Backup saved as %2$s.</string>
+    <string name="tone_models_failed">Failed: %1$s</string>
 </resources>

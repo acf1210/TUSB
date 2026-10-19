@@ -40,5 +40,14 @@ interface PedalConnection {
     suspend fun writeMasterVolume(value: Float) {}
     /** Pede o volume master; a resposta chega como [PedalRuntimeEvent.MasterVolumeChanged]. */
     suspend fun requestMasterVolume() {}
+    /**
+     * Le o preset completo (0x0303, com o Tone Model) e devolve o corpo exato do pedal.
+     * [bank] 1 = presets salvos 0..19; 0 = preset em edicao.
+     */
+    suspend fun readFullPreset(bank: Int, index: Int): ByteArray =
+        throw UnsupportedOperationException("leitura de preset completo nao suportada")
+    /** Grava um corpo 0x0303 (preset completo, com Tone Model) no preset salvo [targetIndex]. */
+    suspend fun writeFullPreset(body: ByteArray, targetIndex: Int): Unit =
+        throw UnsupportedOperationException("gravacao de preset completo nao suportada")
     suspend fun disconnect()
 }
