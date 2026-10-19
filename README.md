@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-1.0.6-brightgreen" />
+  <img alt="version" src="https://img.shields.io/badge/version-1.0.7-brightgreen" />
   <img alt="platform" src="https://img.shields.io/badge/platform-Android%207.0%2B-3DDC84" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue" />
   <img alt="status" src="https://img.shields.io/badge/status-community-orange" />
@@ -25,35 +25,35 @@
 
 ---
 
-## 📦 APK V1.0.6 / VirusTotal
+## 📦 APK V1.0.7 / VirusTotal
 
 ### 🇧🇷 Português Brasil
 
 **Baixe o APK oficial da release:**
-👉 [TUSB-v1.0.6.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.6/TUSB-v1.0.6.apk)
+👉 [TUSB-v1.0.7.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.7/TUSB-v1.0.7.apk)
 
 **Verificação VirusTotal:** gerada automaticamente pelo workflow da release.
-**Relatório:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.6/VIRUSTOTAL.md)
+**Relatório:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.7/VIRUSTOTAL.md)
 
 **Regra para novas versões:** toda nova release com APK deve atualizar o VirusTotal automaticamente via [release automation](docs/RELEASE_AUTOMATION.md).
 
 ### 🇺🇸 English US
 
 **Download the official release APK:**
-👉 [TUSB-v1.0.6.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.6/TUSB-v1.0.6.apk)
+👉 [TUSB-v1.0.7.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.7/TUSB-v1.0.7.apk)
 
 **VirusTotal scan:** generated automatically by the release workflow.
-**Report:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.6/VIRUSTOTAL.md)
+**Report:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.7/VIRUSTOTAL.md)
 
 **Rule for new versions:** every new release with an APK must update VirusTotal automatically via [release automation](docs/RELEASE_AUTOMATION.md).
 
 ### 🇪🇸 Español
 
 **Descarga el APK oficial de la release:**
-👉 [TUSB-v1.0.6.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.6/TUSB-v1.0.6.apk)
+👉 [TUSB-v1.0.7.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.7/TUSB-v1.0.7.apk)
 
 **Verificación VirusTotal:** generada automaticamente por el workflow de release.
-**Informe:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.6/VIRUSTOTAL.md)
+**Informe:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.7/VIRUSTOTAL.md)
 
 **Regla para nuevas versiones:** cada nueva release con APK debe actualizar VirusTotal automáticamente mediante [release automation](docs/RELEASE_AUTOMATION.md).
 
@@ -76,7 +76,7 @@
 
 ## 🇧🇷 Português Brasil
 
-### Novidades no main (ainda sem release)
+### Destaques da V1.0.7
 
 - Ajustes do pedal gravados via USB no Menu: volume master, trim de entrada, referência A4,
   saída com o afinador ligado (mudo/passar som), BPM global e fonte do tempo. Validados no
@@ -174,7 +174,7 @@ O APK debug fica em `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 🇺🇸 English US
 
-### New on main (not released yet)
+### V1.0.7 highlights
 
 - Pedal settings written over USB from the Menu: master volume, input trim, A4 reference,
   output while tuning (mute/thru), global BPM, and tempo source. Validated on a real ToneX One.
@@ -271,7 +271,7 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 🇪🇸 Español
 
-### Novedades en main (aún sin release)
+### Novedades de la V1.0.7
 
 - Ajustes del pedal guardados por USB desde el Menú: volumen master, trim de entrada,
   referencia A4, salida con el afinador activo (silencio/pasar sonido), BPM global y fuente

@@ -27,6 +27,8 @@
 ## Build
 
 - APK: `TUSB-v1.0.7.apk` (attached to the GitHub release)
+- SHA-256: `CE7B5C65E70CE7552305F9E2D20ADF2AE72DDD189AA7FFD729D6D4152AA9DFBA`
+- Size: `21876762 bytes`
 - Version code: `16`
 - Unit tests: 173 passing
 - VirusTotal: generated automatically by the release workflow after publication.
