@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-1.0.8-brightgreen" />
+  <img alt="version" src="https://img.shields.io/badge/version-1.0.9-brightgreen" />
   <img alt="platform" src="https://img.shields.io/badge/platform-Android%207.0%2B-3DDC84" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue" />
   <img alt="status" src="https://img.shields.io/badge/status-community-orange" />
@@ -25,35 +25,35 @@
 
 ---
 
-## 📦 APK V1.0.8 / VirusTotal
+## 📦 APK V1.0.9 / VirusTotal
 
 ### 🇧🇷 Português Brasil
 
 **Baixe o APK oficial da release:**
-👉 [TUSB-v1.0.8.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.8/TUSB-v1.0.8.apk)
+👉 [TUSB-v1.0.9.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.9/TUSB-v1.0.9.apk)
 
 **Verificação VirusTotal:** gerada automaticamente pelo workflow da release.
-**Relatório:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.8/VIRUSTOTAL.md)
+**Relatório:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.9/VIRUSTOTAL.md)
 
 **Regra para novas versões:** toda nova release com APK deve atualizar o VirusTotal automaticamente via [release automation](docs/RELEASE_AUTOMATION.md).
 
 ### 🇺🇸 English US
 
 **Download the official release APK:**
-👉 [TUSB-v1.0.8.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.8/TUSB-v1.0.8.apk)
+👉 [TUSB-v1.0.9.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.9/TUSB-v1.0.9.apk)
 
 **VirusTotal scan:** generated automatically by the release workflow.
-**Report:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.8/VIRUSTOTAL.md)
+**Report:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.9/VIRUSTOTAL.md)
 
 **Rule for new versions:** every new release with an APK must update VirusTotal automatically via [release automation](docs/RELEASE_AUTOMATION.md).
 
 ### 🇪🇸 Español
 
 **Descarga el APK oficial de la release:**
-👉 [TUSB-v1.0.8.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.8/TUSB-v1.0.8.apk)
+👉 [TUSB-v1.0.9.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.9/TUSB-v1.0.9.apk)
 
 **Verificación VirusTotal:** generada automaticamente por el workflow de release.
-**Informe:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.8/VIRUSTOTAL.md)
+**Informe:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.9/VIRUSTOTAL.md)
 
 **Regla para nuevas versiones:** cada nueva release con APK debe actualizar VirusTotal automáticamente mediante [release automation](docs/RELEASE_AUTOMATION.md).
 
@@ -75,6 +75,11 @@
 ---
 
 ## 🇧🇷 Português Brasil
+
+### Destaques da V1.0.9
+
+- Checagem automática de atualização ao abrir o app (no máximo a cada 12 h), com aviso, novidades e botão para baixar o APK.
+- Menu → Geral: versão instalada, "Verificar agora" e opção para desligar a checagem automática.
 
 ### Destaques da V1.0.8
 
@@ -180,6 +185,11 @@ O APK debug fica em `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 🇺🇸 English US
 
+### V1.0.9 highlights
+
+- Automatic update check on launch (at most every 12 h), with a notice, release notes, and a button to download the APK.
+- Menu → General: installed version, "Check now", and a switch to turn the automatic check off.
+
 ### V1.0.8 highlights
 
 - Tone Model library (button on the Presets tab): saves any pedal preset with its full Tone Model to the phone and writes it back to any slot, with an automatic backup and confirmation.
@@ -282,6 +292,11 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 ---
 
 ## 🇪🇸 Español
+
+### Novedades de la V1.0.9
+
+- Búsqueda automática de actualizaciones al abrir la app (como máximo cada 12 h), con aviso, novedades y botón para descargar el APK.
+- Menú → General: versión instalada, "Buscar ahora" y opción para desactivar la búsqueda automática.
 
 ### Novedades de la V1.0.8
 

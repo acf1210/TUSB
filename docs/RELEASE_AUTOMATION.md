@@ -15,8 +15,19 @@ repository security review before publishing the release.
    artefatos de engenharia reversa do app oficial (proprietarios, nunca publicar).
 4. So publicar a release depois que os itens acima passarem.
 
-Ultima revisao: v1.0.8 (2026-10-19) — sem segredos ou arquivos de build sensiveis versionados
+Ultima revisao: v1.0.9 (2026-10-19) — sem segredos ou arquivos de build sensiveis versionados
 no commit desta release ou no historico Git.
+
+## APK assinado / Signed APK
+
+`scripts/release-apk.sh <git-ref> <versao>` gera o APK a partir do commit (build limpo via
+`git archive`), roda os testes, assina e confere se o certificado e o das releases publicadas
+(`615c2145…`); sem isso, quem ja tem o TUSB nao consegue atualizar por cima. A chave fica fora
+do repositorio, em `~/.config/tusb/release.keystore` (modo 600), na maquina que publica.
+
+`scripts/release-apk.sh <git-ref> <version>` builds the APK from the commit, runs the tests,
+signs it and refuses any certificate other than the published one. The key lives outside the
+repository at `~/.config/tusb/release.keystore` (mode 600) on the publishing machine.
 
 ---
 
