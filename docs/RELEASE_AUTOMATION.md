@@ -15,7 +15,7 @@ repository security review before publishing the release.
    artefatos de engenharia reversa do app oficial (proprietarios, nunca publicar).
 4. So publicar a release depois que os itens acima passarem.
 
-Ultima revisao: v1.0.9 (2026-10-19) — sem segredos ou arquivos de build sensiveis versionados
+Ultima revisao: v1.0.10 (2026-10-19) — sem segredos ou arquivos de build sensiveis versionados
 no commit desta release ou no historico Git.
 
 ## APK assinado / Signed APK
