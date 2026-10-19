@@ -48,3 +48,8 @@ tools/apktool/*.jar
 err.log
 *.log
 tonex-current-screen.png
+
+# Chaves de assinatura e presets reais do pedal (contem Tone Models proprietarios)
+*.keystore
+*.jks
+*.tusbtone

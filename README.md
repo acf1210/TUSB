@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-1.0.7-brightgreen" />
+  <img alt="version" src="https://img.shields.io/badge/version-1.0.8-brightgreen" />
   <img alt="platform" src="https://img.shields.io/badge/platform-Android%207.0%2B-3DDC84" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue" />
   <img alt="status" src="https://img.shields.io/badge/status-community-orange" />
@@ -25,35 +25,35 @@
 
 ---
 
-## 📦 APK V1.0.7 / VirusTotal
+## 📦 APK V1.0.8 / VirusTotal
 
 ### 🇧🇷 Português Brasil
 
 **Baixe o APK oficial da release:**
-👉 [TUSB-v1.0.7.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.7/TUSB-v1.0.7.apk)
+👉 [TUSB-v1.0.8.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.8/TUSB-v1.0.8.apk)
 
 **Verificação VirusTotal:** gerada automaticamente pelo workflow da release.
-**Relatório:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.7/VIRUSTOTAL.md)
+**Relatório:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.8/VIRUSTOTAL.md)
 
 **Regra para novas versões:** toda nova release com APK deve atualizar o VirusTotal automaticamente via [release automation](docs/RELEASE_AUTOMATION.md).
 
 ### 🇺🇸 English US
 
 **Download the official release APK:**
-👉 [TUSB-v1.0.7.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.7/TUSB-v1.0.7.apk)
+👉 [TUSB-v1.0.8.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.8/TUSB-v1.0.8.apk)
 
 **VirusTotal scan:** generated automatically by the release workflow.
-**Report:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.7/VIRUSTOTAL.md)
+**Report:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.8/VIRUSTOTAL.md)
 
 **Rule for new versions:** every new release with an APK must update VirusTotal automatically via [release automation](docs/RELEASE_AUTOMATION.md).
 
 ### 🇪🇸 Español
 
 **Descarga el APK oficial de la release:**
-👉 [TUSB-v1.0.7.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.7/TUSB-v1.0.7.apk)
+👉 [TUSB-v1.0.8.apk](https://github.com/acf1210/TUSB/releases/download/v1.0.8/TUSB-v1.0.8.apk)
 
 **Verificación VirusTotal:** generada automaticamente por el workflow de release.
-**Informe:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.7/VIRUSTOTAL.md)
+**Informe:** [VIRUSTOTAL.md](https://github.com/acf1210/TUSB/releases/download/v1.0.8/VIRUSTOTAL.md)
 
 **Regla para nuevas versiones:** cada nueva release con APK debe actualizar VirusTotal automáticamente mediante [release automation](docs/RELEASE_AUTOMATION.md).
 
@@ -75,6 +75,12 @@
 ---
 
 ## 🇧🇷 Português Brasil
+
+### Destaques da V1.0.8
+
+- Biblioteca de Tone Models (botão na aba Presets): salva no celular qualquer preset do pedal com o Tone Model completo e grava de volta em qualquer posição, com backup automático e confirmação.
+- Arquivos `.tusbtone` para exportar, importar e compartilhar presets entre usuários do TUSB.
+- Tone Models do ToneNET: carregue pelo app oficial e salve no TUSB.
 
 ### Destaques da V1.0.7
 
@@ -174,6 +180,12 @@ O APK debug fica em `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 🇺🇸 English US
 
+### V1.0.8 highlights
+
+- Tone Model library (button on the Presets tab): saves any pedal preset with its full Tone Model to the phone and writes it back to any slot, with an automatic backup and confirmation.
+- `.tusbtone` files to export, import, and share presets between TUSB users.
+- ToneNET Tone Models: load them with the official app, then save them in TUSB.
+
 ### V1.0.7 highlights
 
 - Pedal settings written over USB from the Menu: master volume, input trim, A4 reference,
@@ -270,6 +282,12 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 ---
 
 ## 🇪🇸 Español
+
+### Novedades de la V1.0.8
+
+- Biblioteca de Tone Models (botón en la pestaña Presets): guarda en el teléfono cualquier preset del pedal con su Tone Model completo y lo graba de vuelta en cualquier posición, con copia automática y confirmación.
+- Archivos `.tusbtone` para exportar, importar y compartir presets entre usuarios de TUSB.
+- Tone Models de ToneNET: cárgalos con la app oficial y guárdalos en TUSB.
 
 ### Novedades de la V1.0.7
 
